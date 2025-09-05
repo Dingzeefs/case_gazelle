@@ -506,3 +506,48 @@ That’s it. Start at step 0, then run 1→5 (and 6 if needed), then 7 for the d
   - Indien nog ontbrekend: gebruik gemiddelde dealer‑coördinaten per PC4 als noodoplossing.
   - Herbereken coverage (`coverage_overall.csv`) en white‑spots (`white_spots_ranked.csv`) met deze centroids.
 
+---
+
+## Notebook checklists (wat MOET erin) en verplichte exports
+
+- 01_dataprep.ipynb
+  - [ ] Dealers: `brand_clean`, `is_pon_dealer`, unieke `google_place_id`, `pc4` (4 cijfers), schrijf `data/processed/dealers.parquet`.
+  - [ ] Demografie: sentinel −99997 → NaN; kolommen naar numeriek; join `pc4_gemeente.csv`.
+  - [ ] Features & proxies:
+    - `pop_total` (alias ook `inwoners` voor latere merge)
+    - `density` (= Omgevingsadressendichtheid), `woz` (= WOZ‑waarde)
+    - Norms: `income_norm = (woz - min)/(max - min)`, `density_norm` idem
+    - Ratios: `hh_1p_pct`, `kids_0_15_pct`, `age_25_44_pct`
+  - [ ] Clusters (k=5): voeg `cluster` toe
+  - [ ] Exports: `data/processed/demografie.parquet`, `outputs/tables/kpis_by_pc4_with_clusters.csv`
+
+- 02_coverage.ipynb
+  - [ ] PC4‑coördinaten (median dealer per pc4 of centroids indien beschikbaar)
+  - [ ] Afstand tot dichtstbijzijnde Pon‑dealer (haversine/KDTree)
+  - [ ] Coverage radii tabel → `outputs/tables/coverage_overall.csv`
+  - [ ] White‑spots (R=7.5 km) → `outputs/tables/white_spots_ranked.csv`
+  - [ ] Policy‑aware score join (`policy_index.csv`) → `outputs/tables/white_spots_with_policy.csv`
+  - [ ] Demografie‑score `S_dem` toevoegen (kids/25‑44 plus, 1p min) en wegschrijven naar dezelfde CSV
+  - [ ] Proximity exports:
+    - ringen (3/5/7.5/10 km) → `outputs/tables/proximity_kpis.csv`
+    - 300m Pon↔Pon en 500m Pon↔niet‑Pon per gemeente → `outputs/tables/proximity_summary.csv`
+    - optioneel ring‑kaart → `outputs/figures/proximity_rings.html`
+
+- 03_kpis_viz.ipynb
+  - [ ] `kpi_overview.csv` per gemeente: dealers, pon_dealers, dealers_per_100k, pon_share
+  - [ ] Top‑10 onderbediend én top‑10 overbediend gemeenten exporteren:
+    - Onderbediend: lage dealers/100k + veel inwoners_white + hoge mean_dist → `white_spots_top10_gemeenten.csv`
+    - Overbediend: hoge dealers/100k + lage inwoners_white → `over_served_top10_gemeenten.csv`
+  - [ ] Portfolio/merk‑KPI’s: per `brand_clean` dealers_per_100k en share (tabel) → `brand_counts_top20.csv` (of vergelijkbare export)
+  - [ ] (Optioneel) Choropleths/figuren naar `outputs/figures/`
+
+- 05_intl_shortlist.ipynb
+  - [ ] City score tabel → `outputs/tables/ua_intl_shortlist.csv` (met `city_score`, `coverage_current`, `coverage_target`, `dealers_needed`)
+  - [ ] Slide‑ready top‑3 selectie met target‑gap → #dealers
+
+- Validatie (einde)
+  - [ ] Bestaan en niet‑lege CSV’s: `coverage_overall.csv`, `white_spots_with_policy.csv`, `kpi_overview.csv`, `white_spots_top10_gemeenten.csv`, `proximity_kpis.csv`, `proximity_summary.csv`, `ua_intl_shortlist.csv`
+  - [ ] Random seeds ingesteld (bijv. `random_state=42`) waar van toepassing
+  - [ ] Kolomnamen consistent: `pc4`, `gemeente`, `inwoners`, `dist_nearest_pon_km`, `policy_index`, `S_dem`
+
+
