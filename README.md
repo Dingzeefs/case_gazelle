@@ -194,3 +194,21 @@ Zie `requirements.txt`.
 - Dashboard‑toevoeging:
   - Filter “Demografisch cluster” en KPI‑kaart per cluster; tooltip met inkomen, huishoudens, leeftijdsprofiel.
 
+## 15‑min deliverables (concreet en board‑ready)
+
+- Over/onderbediend (gemeenten)
+  - Output: `outputs/tables/kpi_overview.csv` en `outputs/tables/coverage_overall.csv` + top‑10 tabel met gemeente, inwoners, dealers/100k, Pon‑share, coverage, S_dem score.
+  - Herkomst: `01_dataprep.ipynb` (demografie/aggregatie) → `02_coverage.ipynb` (coverage, S_dem) → `03_kpis_viz.ipynb` (top‑10 export).
+
+- UA internationaal (3 landen/steden + dealer targets)
+  - Output: `outputs/tables/ua_intl_shortlist.csv` met city score, policy‑flag, huidige coverage en target‑gap → vertaald naar #dealers bij 5–7.5 km.
+  - Herkomst: `05_intl_shortlist.ipynb` (densiteit + policy + POIs + inkomen); we presenteren top‑3 steden/landen met target (≥80% coverage) en benodigd #dealers.
+
+- Portfolio‑advies per merk (stoppen/toevoegen, met business case)
+  - Output: slide met merkmatrix: coverage‑gap vs concurrentie‑intensiteit en cluster‑fit; tabellen per merk met incremental coverage per extra dealer en cannibalisatie‑risico.
+  - Herkomst: `02_coverage.ipynb` (proximity/cannibalisatie) + `03_kpis_viz.ipynb` (merk‑KPI’s). Voorstel: focus op e‑bike/cargo; de‑prioriteer merken met lage incremental coverage en hoge overlap.
+
+- Tijdslijn (werkbaar in 1‑2 dagen)
+  - Dag 1: dataprep + coverage + demografie‑clusters + top‑10 gemeenten.
+  - Dag 2: proximity/cannibalisatie + UA shortlist + portfolio‑matrix + slides.
+
