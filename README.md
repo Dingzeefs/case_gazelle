@@ -164,3 +164,33 @@ Zie `requirements.txt`.
 - Beperkingen en risico’s (expliciet):
   - Hemelsbrede afstand; ratings en reviews incompleet; geocoding onnauwkeurig op adresniveau; snapshots in de tijd; geen omzetdata. Documenteer aannames per slide/notebook.
 
+### Demografie-integratie (inkomen, huishoudens, leeftijden)
+
+- Feature set (per PC4, geaggregeerd naar gemeente waar nodig):
+  - Inkomen: mediaan of gemiddelde besteedbaar huishoudinkomen; aandeel lage/hoog‑inkomenskwintielen.
+  - Huishoudens: aantal huishoudens, gemiddelde grootte, aandeel gezinnen met kinderen, eenpersoonshuishoudens.
+  - Leeftijd: verdeling 0–14, 15–24, 25–44, 45–64, 65+; vergrijzingsratio.
+  - Stedelijkheid/dichtheid en WOZ als koopkracht/footfall‑proxies (reeds aanwezig).
+
+- Gebruik in analyses:
+  - Segmentatie/clustering van PC4’s: k‑means of HDBSCAN op genormaliseerde demografische features → 4–6 leefstijlclusters (bijv. “jong stedelijk”, “gezin suburbaan”, “senior dorps”).
+  - Merk‑fit per cluster: bereken huidige dealers/100k en Pon‑share per cluster om product‑market fit te leren; gebruik dit als prior in white‑spot scoring.
+  - Elasticiteits‑proxy: regressie of GAM van dealers/100k ~ demografische features om te zien waar extra dealers relatief meer impact hebben.
+
+- Score‑uitbreiding met demografie:
+  - S_dem = S_policy + β1·z(huishoudens_met_kinderen%) + β2·z(inkomen_kwintiel_3_5%) + β3·z(25_44%) − β4·z(1p_huishoudens%).
+  - Merk‑specifiek: α/β gewichten per merk (UA meer gewicht op dichtheid en 25–44; Gazelle op gezinnen; sport op hoge inkomens). Startwaarden documenteren en later kalibreren.
+
+- KPI’s en visuals:
+  - Tabel met KPI’s per demografisch cluster (coverage, dealers/100k, Pon‑share, white‑spots).
+  - Kaartlaag: choropleth per gemeente met clusterkleur + markers dealers.
+  - Explainer: feature‑importances/coefficients en voorbeeldgebieden per cluster.
+
+- Implementatie (notebooks):
+  - `01_dataprep.ipynb`: maak schone demografie‑features; normaliseer; maak `clusters` per PC4 en exporteer naar `outputs/tables/kpis_by_pc4_with_clusters.csv` (bestand bestaat al als placeholder).
+  - `02_coverage.ipynb`: voeg cluster‑kolom toe aan white‑spots en pas S_dem toe; exporteer `white_spots_with_policy.csv` inclusief cluster en S_dem.
+  - `03_kpis_viz.ipynb`: maak figuren per cluster (bars/choropleth); exporteer `kpi_overview.csv` per cluster.
+
+- Dashboard‑toevoeging:
+  - Filter “Demografisch cluster” en KPI‑kaart per cluster; tooltip met inkomen, huishoudens, leeftijdsprofiel.
+
