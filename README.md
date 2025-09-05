@@ -10,7 +10,7 @@ Dit project helpt om in 2 dagen van ruwe data naar een board-ready advies te kom
 
 ## Data
 - `dealer_lijst.csv`: winkels en merken. Eén winkel kan meerdere regels hebben (per merk). Unieke sleutel: `google_place_id`.
-- `demografie.xlsx`: inwoners en demografie per postcode (CBS).
+- `demografie.csv`: inwoners en demografie per postcode (CBS).(dealers en merken in NL), (CBS-demografie per postcode) (inkomens, huishoudens, leeftijden, gezinnen etc)  Weet dat voor de data, betekenis -99997 =  '0 - 4 / geheim / niet aanwezig'.
 
 ## Kernbegrippen (simpele definities)
 - **Dealer (uniek)**: één winkel (gebaseerd op `google_place_id`).
@@ -32,7 +32,7 @@ Dit project helpt om in 2 dagen van ruwe data naar een board-ready advies te kom
 ## Stappenplan
 1) **Data inlezen en schoonmaken**
    - CSV inlezen, leegtes/duplicaten controleren
-   - Excel inlezen (inwoners per postcode)
+   - CSV inlezen (inwoners per postcode)
    - Unieke dealers maken: groeperen op `google_place_id`
    - Merkenlijst per dealer maken; Pon-vlag toevoegen
 
@@ -126,3 +126,41 @@ Zie `requirements.txt`.
 - Definitie (praktisch): bijdrage aan emissiereductie (ZE/LEZ), stedelijke leefbaarheid/ruimte, duurzame mobiliteit, en lokale economische effecten (werkgelegenheid/servicecapaciteit). Politiek: alignment met gemeentelijke/transitie‑agenda’s.
 - Model‑representatie: `policy_index` (ZE/LEZ) als expliciete feature; stedelijkheid/dichtheid als leefbaarheid/footfall‑proxy; proximity‑guardrails om overlast/saturatie te beperken.
 - Gebruik in beslisboom: bij gelijke “data‑score” krijgt scenario met hogere CSR/policy‑waarde de voorkeur (bijv. UA in ZE‑stad). In portfolio‑advies kan een merk met lage incremental coverage maar hoge CSR‑waarde toch “behouden/opschalen” zijn in specifieke segmenten.
+
+## Uitbreidingen op plan (onderzoek + techniek)
+
+- Onderzoekssamenvattingen (Cargo‑bike/ZEZ, Urban Arrow, Pon.Bike):
+  - In grote steden neemt de beleidsdruk (ZE/LEZ) snel toe. Prioriteer ZE‑steden en vroege startjaren in de uitrol; gebruik `policy_index` als vermenigvuldigingsfactor in de score.
+  - Urban Arrow: premium en service‑intensief, focus op dichte stedelijke kernen; hanteer cannibalisatie‑guardrails door minimale afstand tussen UA‑dealers (bijv. 3–5 km ringen) te respecteren.
+  - Portfolio‑differentiatie: merken bedienen verschillende doelgroepen. Gebruik merk‑specifieke radius in gevoeligheidsanalyse (UA 5–7.5 km; Gazelle 7.5–10 km; sportief 7.5–12 km).
+
+- Datakwaliteit en cleaning (CBS‑demografie):
+  - Waarde −99997 interpreteren als 0 (tellingen) of NaN (percentages/ratio’s); documenteer per kolom. Type‑coercion naar numeriek en drop van volledig missende PC4‑regels.
+  - Deduplicatie dealers op `google_place_id`; normaliseer merken (`brand_clean`) en Pon‑vlag (`is_pon_dealer`).
+  - Mapping `PC4 → gemeente` via `data/external/pc4_gemeente.csv` voor aggregaties en policy‑join.
+
+- Scoring white‑spots (beleid‑aware):
+  - Basisscore S = z(inwoners) + z(dist_nearest_pon_km) − z(concurrentie_intensiteit) + 0.5 · z(pon_share_gap).
+  - Policy‑correctie: S_policy = S × (1 + α · policy_index), standaard α = 0.5. Exporteer naar `outputs/tables/white_spots_with_policy.csv`.
+  - Guardrails: sla gebieden met extreem hoge dealer‑dichtheid nabij (overlap binnen 0–3–5 km ringen) lager aan om kannibalisatie te beperken.
+
+- KPI’s uitgebreid:
+  - Coverage (Pon en per merk), dealers/100k, Pon‑share, concurrentie‑intensiteit.
+  - Dealerkwaliteit (proxy) = `avg_rating * ln(1 + reviews)`; stabiliteit/top‑10 uit `outputs/tables/top10_stability.csv`.
+  - Proximity KPI’s: overlap per ring (0–3–5–7.5–10 km) en dichtstbijzijnde afstandsverdeling.
+
+- Validatie en sanity checks:
+  - Herbereken inwoners‑totaal per gemeente/provincie en vergelijk met CBS‑referentie; steekproef top‑20 white‑spots en dichtstbijzijnde dealerlocaties.
+  - Kaart‑controle: visualiseer outliers (zeer grote afstand of onrealistisch hoge aantallen) voor handmatige review.
+
+- Reproduceerbare run (quickstart):
+  - Voer `notebooks/01_dataprep.ipynb` → `02_coverage.ipynb` → `03_kpis_viz.ipynb` uit, en run `src/build_policy_index.py` voor policy.
+  - Start dashboard: `streamlit run app/streamlit_app.py` en filter op merk/radius; toggle ZE‑steden.
+
+- Dashboard‑uitbreidingen:
+  - Choropleth‑laag per gemeente (dealers/100k of coverage) en toggle voor ZE‑policy.
+  - KPI‑tabel met download (CSV) en white‑spots top‑50 (policy‑aware).
+
+- Beperkingen en risico’s (expliciet):
+  - Hemelsbrede afstand; ratings en reviews incompleet; geocoding onnauwkeurig op adresniveau; snapshots in de tijd; geen omzetdata. Documenteer aannames per slide/notebook.
+
