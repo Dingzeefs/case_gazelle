@@ -458,3 +458,29 @@ git commit -m "feat: refresh notebooks outputs; add proximity KPIs, policy-aware
 
 That’s it. Start at step 0, then run 1→5 (and 6 if needed), then 7 for the dashboard, and assemble slides in 8 using the generated tables.
 
+## Extra inspiratie (direct toepasbaar, zonder scraping of ML)
+
+- Competitive co‑location & proximity‑visuals
+  - Maak in `02_coverage.ipynb` een extra export `outputs/tables/proximity_report.csv` met:
+    - Ringen: 1/3/5/7.5/10 km
+    - `pon_near_pon`, `pon_near_nonpon` (non‑Pon = uit `dealer_lijst.csv` gefilterd via `is_pon_dealer == False`)
+  - Voeg histogram van afstanden toe (Pon↔Pon en Pon↔non‑Pon) naar `outputs/figures/`.
+
+- Cannibalisatie‑guardrails (per merk)
+  - Stel minimale afstandsregels in (bijv. UA ≥3–5 km; Gazelle ≥5–7.5 km).
+  - Voeg een penalty toe in white‑spot scoring wanneer een nieuwe dealer voorstel binnen de merk‑ring te veel Pon‑buren heeft.
+  - Rapporteer per merk de ratio `pon_near_pon / pon_near_nonpon` per ring.
+
+- H3 white‑space in steden (micro‑gaten)
+  - Gebruik `h3` Python package en maak raster (res 7–8) voor drie grootste steden.
+  - Aggregatie per cel: inwoners (gesommeerd via pc4→cel), min. afstand tot Pon‑dealer, count Pon/non‑Pon dealers per cel.
+  - Exporteer top‑N cellen als `outputs/tables/white_spots_h3_{stad}.csv` en optionele folium‑kaart.
+
+- Dealers/100k choropleth (Maptitude‑stijl)
+  - In `03_kpis_viz.ipynb`: maak choropleth per gemeente met `dealers_per_100k` en aparte laag voor `pon_share`.
+  - Sla PNG/HTML op naar `outputs/figures/` en verwijs in slides.
+
+- UA benchmark‑curves
+  - Plot coverage vs #Pon‑dealers (landelijk en per grote stad) en markeer target (80%).
+  - Slide: “Gap → #dealers” voor 3 UA‑steden uit `ua_intl_shortlist.csv`.
+
