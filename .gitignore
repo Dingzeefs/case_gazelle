@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.ipynb_checkpoints
+.DS_Store
+logs/
+.venv/
+.env
+data/processed/
+outputs/
+*.checkpoint.ipynb
+*.swp
+*.swo
+.vscode/
+.idea/
