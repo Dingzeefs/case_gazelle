@@ -484,3 +484,25 @@ That’s it. Start at step 0, then run 1→5 (and 6 if needed), then 7 for the d
   - Plot coverage vs #Pon‑dealers (landelijk en per grote stad) en markeer target (80%).
   - Slide: “Gap → #dealers” voor 3 UA‑steden uit `ua_intl_shortlist.csv`.
 
+### Extra inspiratie uit enrichment-snippet
+
+- Enrichment naar white‑spots:
+  - Merge demografische proxies zoals `income_norm`, `density_norm` (uit `demografie.parquet`) in `white_spots_ranked.csv` op `pc4`.
+  - Map `pc4 → gemeente` via `data/external/pc4_gemeente.csv`; schoon `gemeente` met `.str.strip()`.
+  - Optionele `plaats` toekenning:
+    - Gebruik eigen `custom_pc4_plaats` dict voor edge‑cases (bijv. `7351: Hoenderloo`).
+    - Fallback: neem primaire woonplaats per gemeente uit `Woonplaatsen_in_Nederland_2024_*.csv` (mode per gemeente); anders `gemeente` als `plaats`.
+  - Policy: merge `ze_steden.csv` en zet `policy_index = 1.0` voor ZE‑gemeenten; overige `0.0`.
+  - Herbereken `score` met gewichten (voorbeeld): `0.30·pop_norm + 0.20·dist_norm + 0.20·policy + 0.15·income_norm + 0.15·density_norm` en sorteer.
+  - Exporteer als `outputs/tables/white_spots_with_policy.csv` met kolommen `pc4, gemeente, plaats, inwoners_pc4, dist_nearest_pon_km, income_norm, density_norm, policy_index, score`.
+
+- Proximity quick‑wins (board‑ready):
+  - Gebruik `BallTree` (haversine) met Pon‑coördinaten voor 300m Pon↔Pon en 500m Pon↔niet‑Pon flags.
+  - Agregeer per `gemeente`: `pon_pon_300m_frac`, `pon_nonpon_500m_frac`, en `pon_count`; exporteer `outputs/tables/proximity_summary.csv`.
+  - Maak een HTML‑kaart met ringen (300m/500m) rond eerste 300 Pon‑dealers → `outputs/figures/proximity_rings.html`.
+
+- Robuuste PC4‑centroids:
+  - Gebruik `pgeocode` om PC6‑gebaseerde lat/lng te benaderen voor elke PC4 (probeer `AA`, `AB` suffix); indien nodig fallback: gemiddelde van alle PC6 binnen PC4 uit pgeocode‑tabel.
+  - Indien nog ontbrekend: gebruik gemiddelde dealer‑coördinaten per PC4 als noodoplossing.
+  - Herbereken coverage (`coverage_overall.csv`) en white‑spots (`white_spots_ranked.csv`) met deze centroids.
+
