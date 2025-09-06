@@ -429,6 +429,36 @@ streamlit run app/streamlit_app.py
     - `white_spots_with_policy.csv` with columns like `pc4, gemeente, inwoners, dist_nearest_pon_km, score, policy_index, score_policy, S_dem`
     - `proximity_kpis.csv` with `ring_km, pon_near_pon, pon_near_nonpon`
 
+#### Optional Streamlit enhancements (copy‑paste snippets)
+
+- Show coverage and proximity rings on the map
+```python
+show_rings = st.sidebar.checkbox('Toon dekking/ringen', True)
+if show_rings:
+    pon_df = dealers[dealers.get('is_pon_dealer', False)].dropna(subset=['google_lat','google_lng']).head(300)
+    for _, r in pon_df.iterrows():
+        lat, lng = float(r['google_lat']), float(r['google_lng'])
+        folium.Circle([lat, lng], radius=radius_km*1000, color='green', fill=False).add_to(m)
+        folium.Circle([lat, lng], radius=300, color='orange', fill=False).add_to(m)
+        folium.Circle([lat, lng], radius=500, color='red', fill=False).add_to(m)
+```
+
+- Add downloads for precomputed HTML maps
+```python
+from pathlib import Path
+for p in ['outputs/figures/proximity_rings.html','outputs/figures/dealers_map.html']:
+    if Path(p).exists():
+        with open(p,'rb') as f:
+            st.download_button(f'Download {Path(p).name}', f, file_name=Path(p).name)
+```
+
+- (Optional) Choropleth by gemeente from `kpi_overview.csv` (outline)
+```python
+import json
+# Load a GeoJSON of gemeenten (supply locally) and join on 'gemeente'
+# Then use folium.Choropleth with data=gemeente_kpis[['gemeente','dealers_per_100k']]
+```
+
 ### 8) Slides (15‑min deliverables)
 - Pull tables:
   - `outputs/tables/white_spots_top10_gemeenten.csv` (Top‑10 onderbediend)
