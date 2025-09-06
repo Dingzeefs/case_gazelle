@@ -33,18 +33,20 @@ streamlit run app/streamlit_app.py
 ### Data Processing Pipeline (Critical Path)
 ```bash
 # MUST run in sequence - contains all core analysis
-jupyter notebook notebooks/01_dataprep.ipynb      # Data cleaning & geographic mapping (interactive)
-jupyter notebook notebooks/02_coverage.ipynb      # White spots & proximity analysis  
-jupyter notebook notebooks/03_kpis_viz.ipynb      # KPIs & visualization for slides
-jupyter notebook notebooks/04_enrichment.ipynb    # Demographics & policy integration
-jupyter notebook notebooks/05_intl_shortlist.ipynb # International expansion analysis
+jupyter notebook notebooks/01_dataprep.ipynb      # ✅ COMPLETED - Data cleaning & geographic mapping 
+jupyter notebook notebooks/02_coverage.ipynb      # ✅ COMPLETED - White spots & proximity analysis  
+jupyter notebook notebooks/03_kpis_viz.ipynb      # ✅ COMPLETED - KPIs & visualization for slides
+jupyter notebook notebooks/04_enrichment.ipynb    # ✅ COMPLETED - ZE-zones & cargo bike analysis
+jupyter notebook notebooks/05_intl_shortlist.ipynb # ⏳ PENDING - International expansion analysis
+jupyter notebook notebooks/06_portfolio_advies.ipynb # ✅ COMPLETED - Brand portfolio strategy
 
 # Non-interactive execution (preferred for CI/local runs)
-jupyter nbconvert --to notebook --execute notebooks/01_dataprep.ipynb --inplace
-jupyter nbconvert --to notebook --execute notebooks/02_coverage.ipynb --inplace
-jupyter nbconvert --to notebook --execute notebooks/03_kpis_viz.ipynb --inplace
-jupyter nbconvert --to notebook --execute notebooks/04_enrichment.ipynb --inplace
-jupyter nbconvert --to notebook --execute notebooks/05_intl_shortlist.ipynb --inplace
+jupyter nbconvert --to notebook --execute notebooks/01_dataprep.ipynb --inplace  # ✅ WORKS
+jupyter nbconvert --to notebook --execute notebooks/02_coverage.ipynb --inplace  # ✅ WORKS  
+jupyter nbconvert --to notebook --execute notebooks/03_kpis_viz.ipynb --inplace  # ✅ WORKS
+jupyter nbconvert --to notebook --execute notebooks/04_enrichment.ipynb --inplace # ✅ WORKS
+jupyter nbconvert --to notebook --execute notebooks/05_intl_shortlist.ipynb --inplace # ⏳ TODO
+jupyter nbconvert --to notebook --execute notebooks/06_portfolio_advies.ipynb --inplace # ✅ WORKS
 
 # Build policy index for ZE-zones
 python src/build_policy_index.py
@@ -231,6 +233,44 @@ Interactive Streamlit app with:
 - No seasonal variations in demand
 - No competitive response modeling
 - No supply chain/inventory constraints
+
+## Current Progress & Key Findings (September 2025)
+
+### Analysis Completed ✅:
+- **01_dataprep.ipynb**: Successfully processed 2,080 dealers with CORRECTED deduplication (preserved 1,282 Pon brand relationships)
+- **02_coverage.ipynb**: Identified 66 white spots affecting 289k people; 97.2% population within 7.5km of Pon dealer  
+- **03_kpis_viz.ipynb**: Generated KPIs for 817 gemeenten and 7 provinces with CORRECTED market share (19.0% TRUE vs 43.8% location-based)
+- **04_enrichment.ipynb**: Demographics clustering and ZE-zones integration with 5-cluster market segmentation
+- **06_portfolio_advies.ipynb**: Brand portfolio analysis with multi-brand cannibalization insights
+
+### Key Market Insights Discovered:
+- **Excellent Coverage**: 97.2% population coverage at 7.5km radius (best-in-class performance)
+- **Corrected Market Share**: TRUE market share of 19.0% (relationship-based) vs 43.8% location presence
+- **Multi-Brand Reality**: 1,374 multi-brand locations detected (68% of all dealers sell multiple brands)
+- **Limited White Spots**: Only 66 underserved areas, mostly rural (Vaals, Ouddorp, Valkenburg top opportunities)  
+- **High Competition**: 12.8 competitors per Pon dealer within 10km (fragmented market)
+- **Internal Cannibalization**: 8.3 Pon dealers within 10km on average
+
+### Current Data Outputs:
+- `dealers_all_brands.parquet` - Complete brand-dealer relationship matrix (6,748 relationships)
+- `gemeente_kpis.csv` - 817 gemeente performance metrics with CORRECTED densities
+- `provincie_kpis.csv` - 7 provincie regional summaries
+- `white_spots_with_policy.csv` - 66 growth opportunities with demographic scoring  
+- `coverage_analysis.png` - 4-panel executive dashboard
+- `market_summary_corrected.csv` - Board-level KPIs with TRUE 19.0% market share
+- `proximity_kpis.csv` - Cannibalization vs competition analysis
+- `brand_performance_analysis.csv` - Multi-brand portfolio insights
+
+### Missing Analysis (Remaining 🔄):
+- **Urban Arrow international expansion** - Need 05_intl_shortlist.ipynb for comparable country analysis
+
+### Critical Issues Resolved:
+- ✅ **Data Deduplication Fixed**: Corrected 69% data loss from aggressive deduplication, restored 1,282 Pon relationships
+- ✅ **Market Share Corrected**: Fixed artificially inflated 43.8% to realistic 19.0% (relationship-based calculation)  
+- ✅ **Multi-Brand Analysis Enabled**: Detected 1,374 multi-brand locations for cannibalization analysis
+- ✅ **Geographic Mapping**: Successfully used dealer addresses for gemeente extraction
+- ✅ **Data Quality**: Handled -99997 CBS missing values and PC4 data type conflicts
+- ✅ **Policy Integration**: Built policy_index.csv for 29 ZE-zone gemeenten with temporal weighting
 
 ## Success Metrics for Case
 

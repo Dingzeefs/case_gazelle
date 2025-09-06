@@ -6,7 +6,7 @@ Het gesprek zal plaatsvinden met Bob van Hulst (Manager Customer Service) en Abd
 Case-omschrijving (2e ronde)
 • Type: Board-ready adviescase (marktanalyse en dealernetwerk-inrichting) voor de 2e ronde van het gesprek voor Data Scientist bij Gazelle (Pon Bike).
 • Doel: Op basis van data een helder, onderbouwd advies voor Pon Bike formuleren.
-• Data: dealer_lijst.csv (dealers en merken in NL), demografie.xlsx (CBS-demografie per postcode).
+• Data: dealer_lijst.csv (dealers en merken in NL), demografie.csv (CBS-demografie per postcode) (inkomens, huishoudens, leeftijden, gezinnen etc)  Weet dat voor de data, betekenis -99997 =  '0 - 4 / geheim / niet aanwezig'.
 • Deliverable: Max. 15 min presentatie met concrete vervolgstappen; Q&A na afloop; deel na afloop code en eventueel dashboard.
 
 • Deliverables (uitgebreid):
