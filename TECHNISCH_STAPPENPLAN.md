@@ -459,6 +459,124 @@ import json
 # Then use folium.Choropleth with data=gemeente_kpis[['gemeente','dealers_per_100k']]
 ```
 
+### 7.1 Streamlit dashboard – technisch stappenplan (end‑to‑end)
+
+Doel: 1 bestand `app/streamlit_app.py` dat draait met: `streamlit run app/streamlit_app.py`.
+
+1) Dependencies en data
+- Zorg dat deze bestanden bestaan voor de app:
+  - `outputs/tables/dealers_by_pc4.csv` (optioneel), `outputs/tables/white_spots_with_policy.csv` of fallback `white_spots_ranked.csv`
+  - `outputs/tables/gemeente_kpis.csv`, `outputs/tables/coverage_overall.csv`
+  - `outputs/tables/policy_index.csv` (optioneel; wordt automatisch genegeerd als afwezig)
+- Installeer deps (staan al in `requirements.txt`).
+
+2) App skeleton
+```python
+import streamlit as st
+import pandas as pd
+import folium
+from streamlit_folium import st_folium
+from pathlib import Path
+
+st.set_page_config(page_title='Pon Bike NL', layout='wide')
+
+@st.cache_data
+def load_csv(path):
+    return pd.read_csv(path) if Path(path).exists() else None
+
+dealers = load_csv('outputs/tables/dealers_by_pc4.csv') or pd.read_parquet('data/processed/dealers.parquet')
+white_spots = load_csv('outputs/tables/white_spots_with_policy.csv') or load_csv('outputs/tables/white_spots_ranked.csv')
+gemeente_kpis = load_csv('outputs/tables/gemeente_kpis.csv')
+coverage_overall = load_csv('outputs/tables/coverage_overall.csv')
+policy_index = load_csv('outputs/tables/policy_index.csv')
+```
+
+3) Sidebar filters
+```python
+brands = sorted(dealers['brand_clean'].dropna().unique()) if 'brand_clean' in dealers.columns else []
+selected_brands = st.sidebar.multiselect('Merken', brands, default=[])
+radius_km = st.sidebar.slider('Radius (km)', 1.0, 10.0, 7.5, 0.5)
+ze_only = st.sidebar.checkbox('Toon alleen ZE‑gemeenten (policy ≥ 0.8)', False)
+show_rings = st.sidebar.checkbox('Toon dekking/ringen', True)
+```
+
+4) Data‑prep per filter
+```python
+df = dealers.copy()
+if selected_brands:
+    df = df[df['brand_clean'].isin([b for b in selected_brands])]
+
+if policy_index is not None and ze_only:
+    # Join policy index op gemeente
+    if 'gemeente' in df.columns and 'gemeente' in policy_index.columns:
+        df = df.merge(policy_index[['gemeente','policy_index']], on='gemeente', how='left')
+        df = df[df['policy_index'].fillna(0) >= 0.8]
+```
+
+5) Kaart renderen (Folium)
+```python
+center = [52.2, 5.3]
+m = folium.Map(location=center, zoom_start=8, tiles='cartodbpositron')
+
+for _, r in df.dropna(subset=['google_lat','google_lng']).iterrows():
+    folium.CircleMarker(
+        [float(r['google_lat']), float(r['google_lng'])],
+        radius=4,
+        color='#1f77b4' if r.get('is_pon_dealer', False) else '#999',
+        fill=True,
+        fill_opacity=0.7,
+        popup=r.get('name','dealer')
+    ).add_to(m)
+
+if show_rings:
+    pon_df = df[df.get('is_pon_dealer', False)].dropna(subset=['google_lat','google_lng']).head(300)
+    for _, r in pon_df.iterrows():
+        lat, lng = float(r['google_lat']), float(r['google_lng'])
+        folium.Circle([lat, lng], radius=radius_km*1000, color='green', fill=False).add_to(m)
+        folium.Circle([lat, lng], radius=300, color='orange', fill=False).add_to(m)
+        folium.Circle([lat, lng], radius=500, color='red', fill=False).add_to(m)
+
+st_folium(m, use_container_width=True)
+```
+
+6) White‑spot tabel en downloads
+```python
+st.subheader('White spots')
+if white_spots is not None:
+    display_cols = [c for c in ['pc4','gemeente','plaats','population','dist_nearest_pon_km','score','policy_index','S_dem'] if c in white_spots.columns]
+    st.dataframe(white_spots[display_cols].head(100))
+else:
+    st.info('Geen white‑spot bestand gevonden')
+
+from pathlib import Path
+for p in ['outputs/figures/proximity_rings.html','outputs/figures/dealers_map.html']:
+    if Path(p).exists():
+        with open(p,'rb') as f:
+            st.download_button(f'Download {Path(p).name}', f, file_name=Path(p).name)
+```
+
+7) KPI‑overzicht (optioneel choropleth)
+```python
+st.subheader('KPI overzicht')
+if gemeente_kpis is not None:
+    cols = [c for c in ['gemeente','pop_total','dealers_per_100k','pon_share','coverage_category'] if c in gemeente_kpis.columns]
+    st.dataframe(gemeente_kpis[cols].sort_values('pop_total', ascending=False).head(50))
+```
+
+8) Performance en caching
+- Gebruik `@st.cache_data` voor CSV/Parquet loads.
+- Beperk aantal getekende ringen (bijv. `head(300)`).
+
+9) Run & packaging
+- Start: `streamlit run app/streamlit_app.py`
+- Voeg een `Makefile` target toe (optioneel): `make app` → start dashboard.
+- Commit na aanpassingen.
+
+10) Validatie
+- Controleer dat filters werken met brand_clean en ZE‑toggle.
+- Check dat fallback naar `white_spots_ranked.csv` gebeurt als policy‑versie ontbreekt.
+- Verifieer dat kaart en tabellen laden zonder errors wanneer optionele bestanden ontbreken.
+
 ### 8) Slides (15‑min deliverables)
 - Pull tables:
   - `outputs/tables/white_spots_top10_gemeenten.csv` (Top‑10 onderbediend)
