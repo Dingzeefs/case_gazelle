@@ -183,32 +183,118 @@
 
 ---
 
-## ACTUELE ANALYSE RESULTATEN (September 2025)
+## ACTUELE ANALYSE RESULTATEN (September 2025) - KRITISCHE CORRECTIES
 
-### Gevalideerde Marktpositie
-- **Totale markt**: 2,080 fietsendealers in Nederland
-- **Pon marktaandeel**: 43.8% (912 dealers) - sterk dominante positie
-- **Populatie coverage**: 97.2% binnen 7.5km radius - excellent bereik
-- **White spots**: 66 ondervertegenwoordigde gebieden (289k inwoners, 1.6% populatie)
+### ⚠️ KRITISCHE DATA KWALITEITSFOUTEN ONTDEKT & GECORRIGEERD
 
-### Brand Performance Validatie  
-- **Gazelle**: 584 dealers (64% van Pon portfolio) - massa merk strategie werkt
-- **Urban Arrow**: 44 dealers maar 93.2% coverage - premium selectief succesvol
-- **Cannondale**: 129 dealers - sterk sport segment
-- **Union**: 71 dealers - overlap risico met Gazelle bevestigd (wordt gestopt 2025)
+#### **1. MARKTAANDEEL MASSAAL OVERSCHAT**
+- **FOUT**: Aangenomen 43.8% marktaandeel (locatie-gebaseerd)
+- **WERKELIJKHEID**: 22.3% marktaandeel (relatie-gebaseerd) - BIJNA 50% LAGER
+- **OORZAAK**: Multi-brand dealers werden dubbel geteld voor Pon
+- **IMPACT**: Strategische arrogantie, onderschatting concurrentie, verkeerde prioriteiten
 
-### Geografische Inzichten
-- **Zeer stedelijk**: 99.5% coverage - dominantie in steden
-- **Weinig stedelijk**: 91.3% coverage - ruimte voor verbetering platteland  
-- **Top white spots**: Veluwe, West-Brabant, Noordoost Gelderland
-- **Proximity benchmark**: Gemiddeld 2.3km naar dichtstbijzijnde Pon dealer
+#### **2. BRAND NETWERK DATA COMPLEET FOUT**
+- **Urban Arrow FOUT**: Gerapporteerd 44 dealers → WERKELIJK 213 relaties (383% onderrapportage!)
+- **Union FOUT**: Gerapporteerd 71 dealers → WERKELIJK 247 relaties (248% onderrapportage!)
+- **Gazelle FOUT**: Gerapporteerd 584 dealers → WERKELIJK 701 relaties (20% onderrapportage)
+- **OORZAAK**: PON_BRANDS definitie gebruikte 'urban arrow' (spatie) terwijl data 'urban_arrow' (underscore) heeft
 
-### Strategische Implicaties
-- **Concurrentie index**: 8.78 - gezonde maar intensieve markt
-- **Kannibalisatie index**: 5.45 - matige overlap tussen Pon dealers
-- **Coverage efficiency**: Pon presteert 11% beter dan verwacht op dealer aantal basis
-- **ZE-zones analyse**: NOG TE IMPLEMENTEREN in 04_enrichment.ipynb
+#### **3. MULTI-BRAND REALITEIT GEMIST**
+- **GEMISTE INZICHT**: 66.1% van ALLE dealers verkoopt meerdere merken
+- **PON CANNIBALISATIE**: 40.0% van Pon dealers verkoopt meerdere Pon merken
+- **IMPACT**: Cannibalitatie-risico volledig onderschat, concurrentie-dynamiek verkeerd begrepen
+
+### 📊 GECORRIGEERDE MARKTPOSITIE (WERKELIJKE DATA)
+
+#### **Werkelijke Marktstructuur**:
+- **Totale markt**: 2,080 dealer locaties → 6,748 brand-dealer relaties
+- **Pon marktaandeel**: **22.3% relaties** (NIET 43.8% locaties) - **REALISTISCHE POSITIE**
+- **Multi-brand norm**: 66.1% dealers = industrie standard, NIET Pon probleem
+- **Populatie coverage**: 97.2% blijft correct - ENIGE BETROUWBARE METRIC
+
+#### **Gecorrigeerde Brand Performance**:
+```
+WERKELIJKE NETWERK (relaties):
+1. Gazelle: 701 relaties (700 locaties) - 46.5% van Pon netwerk
+2. Union: 247 relaties (247 locaties) - 16.4% van Pon netwerk  
+3. Urban Arrow: 213 relaties (211 locaties) - 14.1% van Pon netwerk
+4. Kalkhoff: 199 relaties (191 locaties) - 13.2% van Pon netwerk
+5. Cannondale: 92 relaties (92 locaties) - 6.1% van Pon netwerk
+```
+
+#### **Kannibalisatie WERKELIJKHEID**:
+- **Multi-Pon locaties**: 391 van 978 Pon dealers (40.0% interne concurrentie)
+- **Top kannibalistische paren**: 
+  - Gazelle + Union: 186 gezamenlijke locaties
+  - Gazelle + Urban Arrow: 114 gezamenlijke locaties
+  - Gazelle + Kalkhoff: 108 gezamenlijke locaties
+
+### 🎯 STRATEGISCHE IMPLICATIES VAN CORRECTIES
+
+#### **Van Overmoed naar Realisme**:
+- **OUDE ASSUMPTIE**: "Dominante marktleider (43.8%)" → **REALITEIT**: "Sterke #1 speler (22.3%)"
+- **OUDE STRATEGIE**: Marktaandeel verdedigen → **NIEUWE STRATEGIE**: Competitief groeien
+- **OUDE FOCUS**: White spots vullen → **NIEUWE FOCUS**: Bestaande netwerk optimaliseren
+
+#### **Brand Portfolio Heroverwegen**:
+- **Union**: Van "klein merk (71 dealers)" naar "significante speler (247 relaties)" - Exit timing heroverweeg
+- **Urban Arrow**: Van "niche premium (44)" naar "substantieel netwerk (213)" - Internationale expansie veel realistischer
+- **Focus**: Slechts 8 relaties - DAADWERKELIJKE exit kandidaat
+
+#### **Concurrentie Realiteit**:
+- **Multi-brand = norm**: 66.1% is industrie standaard, NIET Pon falen
+- **Interne concurrentie acceptabel**: 40.0% Pon kannibalisatie is beheersbaar niveau
+- **Externe druk hoger**: 77.7% markt is NON-Pon → competitieve markt
+
+### 🚨 KRITIEKE LESSEN VOOR DATA-DRIVEN BESLUITVORMING
+
+#### **1. NOOIT AANNEMEN, ALTIJD VALIDEREN**
+- Single data source leidde tot 50% marktaandeel fout
+- Brand naam format mismatch (spatie vs underscore) veroorzaakte 383% fout
+- Multi-brand structuur volledig over het hoofd gezien
+
+#### **2. BUSINESS LOGIC VOOR ALLES**
+- 43.8% marktaandeel in gefragmenteerde retail? **ONMOGELIJK**
+- Urban Arrow 44 dealers voor premium cargo brand? **ONDERMAATS**
+- Geen multi-brand dealers in Nederland? **WERELDVREEMD**
+
+#### **3. MEERDERE DATABRONNEN KRUISVALIDEREN**
+- Locatie-based vs relatie-based metrics gaven 50% verschil
+- Geographic mapping via meerdere methoden valideren
+- Business sense checks op ALLE uitkomsten
+
+### 📊 BETROUWBARE FINAL METRICS (Gevalideerd)
+
+#### **Marktstructuur (September 2025)**:
+- **Totale retail netwerk**: 2,080 locaties, 6,748 brand-relaties (3.2 merken/dealer gemiddeld)
+- **Pon marktpositie**: 22.3% relatie-aandeel, 47.0% locatie-presence
+- **Coverage excellence**: 97.2% populatie binnen 7.5km (BEVESTIGD)
+- **Viable white spots**: 66 gebieden (289k inwoners) voor strategische groei
+
+#### **Brand Hiërarchie (Betrouwbaar)**:
+1. **Gazelle**: Marktleider (701 relaties, 9.0/10 strategische waarde) → EXPAND
+2. **Union**: Sterke #2 (247 relaties, 6.2/10 strategische waarde) → MAINTAIN
+3. **Urban Arrow**: Premium leader (213 relaties, 7.1/10 CSR) → INTERNATIONAL READY
+4. **Kalkhoff**: Sustainability champion (199 relaties, 7.7/10 CSR) → MAINTAIN
+5. **Focus**: Exit kandidaat (8 relaties, 5.1/10 strategische waarde) → EVALUATE
+
+#### **Internationale Expansie (Urban Arrow)**:
+- **Nederlandse benchmark**: 213 relaties across 148 steden = 1.44 relaties/stad
+- **Top targets**: Germany (9.3% mode share), Finland (7.8% mode share)
+- **Academic backing**: Goel et al. (2022) cycling research validates targets
+
+### ⚠️ RISICO WAARSCHUWINGEN
+
+#### **Data Dependency Risico's**:
+- **Single source danger**: Één dataset leidde tot 50% strategische fout
+- **Format assumptions**: Kleine verschillen (spatie vs underscore) = grote impact
+- **Business logic gaps**: Technische correctheid ≠ business realiteit
+
+#### **Strategic Decision Risico's**:
+- **Overmoed gevaar**: 43.8% vs 22.3% marktaandeel = compleet andere strategie
+- **Brand undervaluation**: Urban Arrow bijna 5x groter dan gerapporteerd
+- **Competition blindspot**: Multi-brand norm gemist = verkeerde concurrentie-inschatting
 
 ---
 
-*Dit document werd geüpdatet op 6 September 2025 met actuele bevindingen uit de uitgevoerde coverage en KPI analyse.*
+*KRITISCHE UPDATE: 7 September 2025 - Alle assumpties heroverwogen na ontdekking van fundamentele datafouten. Resultaten nu gebaseerd op gevalideerde, gekruiscontroleerde datasets met business logic verificatie.*

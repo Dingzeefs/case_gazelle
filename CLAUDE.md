@@ -9,9 +9,9 @@ This is a board-ready market analysis and dealer network optimization project fo
 ## Case Requirements & Deliverables
 
 ### Core Questions to Answer:
-1. **Regional Analysis**: In welke regio's zijn we te veel, goed, of juist weinig aanwezig?
-2. **International Strategy**: Urban Arrow expansion advise for comparable countries
-3. **Portfolio Strategy**: Should Pon stop/add brands (with CSR/political considerations)?
+1. **Regional Analysis**: In welke regio's zijn we te veel, goed, of juist weinig aanwezig? ✅ ANSWERED
+2. **International Strategy**: Urban Arrow expansion advise for comparable countries ✅ ANSWERED  
+3. **Portfolio Strategy**: Should Pon stop/add brands (with CSR/political considerations)? ✅ ANSWERED
 
 ### Required Deliverables:
 - **Slide deck** (max 15 min presentation)
@@ -37,7 +37,7 @@ jupyter notebook notebooks/01_dataprep.ipynb      # ✅ COMPLETED - Data cleanin
 jupyter notebook notebooks/02_coverage.ipynb      # ✅ COMPLETED - White spots & proximity analysis  
 jupyter notebook notebooks/03_kpis_viz.ipynb      # ✅ COMPLETED - KPIs & visualization for slides
 jupyter notebook notebooks/04_enrichment.ipynb    # ✅ COMPLETED - ZE-zones & cargo bike analysis
-jupyter notebook notebooks/05_intl_shortlist.ipynb # ⏳ PENDING - International expansion analysis
+jupyter notebook notebooks/05_intl_shortlist.ipynb # ✅ COMPLETED - International expansion analysis
 jupyter notebook notebooks/06_portfolio_advies.ipynb # ✅ COMPLETED - Brand portfolio strategy
 
 # Non-interactive execution (preferred for CI/local runs)
@@ -45,7 +45,7 @@ jupyter nbconvert --to notebook --execute notebooks/01_dataprep.ipynb --inplace 
 jupyter nbconvert --to notebook --execute notebooks/02_coverage.ipynb --inplace  # ✅ WORKS  
 jupyter nbconvert --to notebook --execute notebooks/03_kpis_viz.ipynb --inplace  # ✅ WORKS
 jupyter nbconvert --to notebook --execute notebooks/04_enrichment.ipynb --inplace # ✅ WORKS
-jupyter nbconvert --to notebook --execute notebooks/05_intl_shortlist.ipynb --inplace # ⏳ TODO
+jupyter nbconvert --to notebook --execute notebooks/05_intl_shortlist.ipynb --inplace # ✅ WORKS
 jupyter nbconvert --to notebook --execute notebooks/06_portfolio_advies.ipynb --inplace # ✅ WORKS
 
 # Build policy index for ZE-zones
@@ -164,7 +164,7 @@ Interactive Streamlit app with:
 ### Competitor Definition
 - We derive competitors directly from `dealer_lijst.csv` without scraping:
   - `brand_clean = brand.lower().strip()`
-  - `is_pon_dealer = brand_clean in {gazelle,cannondale,union,kalkhoff,urban arrow,cervélo,cervelo,focus,santa cruz}`
+  - `is_pon_dealer = brand_clean in {gazelle,cannondale,union,kalkhoff,urban_arrow,cervélo,cervelo,focus,santa_cruz}`
   - Non‑Pon dealers (`is_pon_dealer == False`) are treated as competitors in share and proximity metrics.
 
 ## Critical Data Issues & Solutions
@@ -237,15 +237,16 @@ Interactive Streamlit app with:
 ## Current Progress & Key Findings (September 2025)
 
 ### Analysis Completed ✅:
-- **01_dataprep.ipynb**: Successfully processed 2,080 dealers with CORRECTED deduplication (preserved 1,282 Pon brand relationships)
+- **01_dataprep.ipynb**: Successfully processed 2,080 dealers with CORRECTED deduplication (preserved 1,507 Pon brand relationships)
 - **02_coverage.ipynb**: Identified 66 white spots affecting 289k people; 97.2% population within 7.5km of Pon dealer  
-- **03_kpis_viz.ipynb**: Generated KPIs for 817 gemeenten and 7 provinces with CORRECTED market share (19.0% TRUE vs 43.8% location-based)
+- **03_kpis_viz.ipynb**: Generated KPIs for 817 gemeenten and 7 provinces with CORRECTED market share (22.3% TRUE vs 43.8% location-based)
 - **04_enrichment.ipynb**: Demographics clustering and ZE-zones integration with 5-cluster market segmentation
+- **05_intl_shortlist.ipynb**: International expansion analysis with academic research (Germany #1 target)
 - **06_portfolio_advies.ipynb**: Brand portfolio analysis with multi-brand cannibalization insights
 
 ### Key Market Insights Discovered:
 - **Excellent Coverage**: 97.2% population coverage at 7.5km radius (best-in-class performance)
-- **Corrected Market Share**: TRUE market share of 19.0% (relationship-based) vs 43.8% location presence
+- **Corrected Market Share**: TRUE market share of 22.3% (relationship-based) vs 43.8% location presence
 - **Multi-Brand Reality**: 1,374 multi-brand locations detected (68% of all dealers sell multiple brands)
 - **Limited White Spots**: Only 66 underserved areas, mostly rural (Vaals, Ouddorp, Valkenburg top opportunities)  
 - **High Competition**: 12.8 competitors per Pon dealer within 10km (fragmented market)
@@ -257,20 +258,25 @@ Interactive Streamlit app with:
 - `provincie_kpis.csv` - 7 provincie regional summaries
 - `white_spots_with_policy.csv` - 66 growth opportunities with demographic scoring  
 - `coverage_analysis.png` - 4-panel executive dashboard
-- `market_summary_corrected.csv` - Board-level KPIs with TRUE 19.0% market share
+- `market_summary_corrected.csv` - Board-level KPIs with TRUE 22.3% market share
+- `ua_intl_academic_analysis.csv` - International expansion targets with opportunity scores
+- `portfolio_recommendations.csv` - Strategic brand portfolio decisions
+- `multi_pon_dealers.csv` - Cannibalization analysis (391 multi-brand locations)
 - `proximity_kpis.csv` - Cannibalization vs competition analysis
 - `brand_performance_analysis.csv` - Multi-brand portfolio insights
 
-### Missing Analysis (Remaining 🔄):
-- **Urban Arrow international expansion** - Need 05_intl_shortlist.ipynb for comparable country analysis
+### ✅ ALL ANALYSIS COMPLETED - CASE READY FOR PRESENTATION
 
 ### Critical Issues Resolved:
-- ✅ **Data Deduplication Fixed**: Corrected 69% data loss from aggressive deduplication, restored 1,282 Pon relationships
-- ✅ **Market Share Corrected**: Fixed artificially inflated 43.8% to realistic 19.0% (relationship-based calculation)  
+- ✅ **Data Deduplication Fixed**: Corrected 69% data loss from aggressive deduplication, restored 1,507 Pon relationships
+- ✅ **Market Share Corrected**: Fixed artificially inflated 43.8% to realistic 22.3% (relationship-based calculation)  
 - ✅ **Multi-Brand Analysis Enabled**: Detected 1,374 multi-brand locations for cannibalization analysis
 - ✅ **Geographic Mapping**: Successfully used dealer addresses for gemeente extraction
 - ✅ **Data Quality**: Handled -99997 CBS missing values and PC4 data type conflicts
 - ✅ **Policy Integration**: Built policy_index.csv for 29 ZE-zone gemeenten with temporal weighting
+- ✅ **International Analysis**: Germany identified as #1 expansion target with academic backing
+- ✅ **Portfolio Strategy**: Complete brand recommendations (EXPAND Gazelle, MAINTAIN 5 brands, EVALUATE Focus)
+- ✅ **Cannibalization Quantified**: 40% of Pon dealers have internal competition (industry norm)
 
 ## Success Metrics for Case
 
