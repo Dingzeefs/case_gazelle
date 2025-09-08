@@ -48,13 +48,16 @@ def load_parquet(path):
     return pd.read_parquet(path) if Path(path).exists() else None
 
 # Load all datasets
-# Try to load the dashboard-optimized version first
-dealers = load_parquet('data/processed/dealers_dashboard.parquet')
-if dealers is None:
+# Force clear cache and try to load the dashboard-optimized version first
+if Path('data/processed/dealers_dashboard.parquet').exists():
+    dealers = pd.read_parquet('data/processed/dealers_dashboard.parquet')
+    st.write("✅ **Loaded enhanced dashboard data**")
+else:
     # Fallback to original dealers data
     dealers = load_parquet('data/processed/dealers.parquet')
     if dealers is None:
         dealers = load_csv('data/raw/dealer_lijst.csv')
+    st.write("⚠️ **Using fallback dealer data**")
 
 white_spots = load_csv('outputs/tables/white_spots_with_policy.csv')
 if white_spots is None:
@@ -376,172 +379,130 @@ if gemeente_kpis is not None:
 # Multi-Brand Network Analytics
 st.subheader('🎭 Multi-Brand Network Analytics')
 
-if dealers is not None:
-    # Check if we have the dashboard version with multi-brand data  
-    if 'n_brands' in df.columns and 'dealer_type' in df.columns:
-        st.write(f"**Dashboard Analytics** - Analyzing {len(df):,} locations with multi-brand data")
+
+# Check if we have the dashboard data with multi-brand info
+if dealers is not None and 'n_brands' in df.columns and 'dealer_type' in df.columns:
+    import plotly.express as px
+    
+    st.write(f"**Analyzing {len(df):,} dealer locations**")
+    
+    # Create two columns for the main charts
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # 1. Dealer Type Distribution
+        dealer_counts = df['dealer_type'].value_counts()
+        fig_pie = px.pie(
+            values=dealer_counts.values,
+            names=dealer_counts.index,
+            title="Dealer Network Composition",
+            color_discrete_map={
+                'Non-Pon': '#e74c3c',
+                'Single Pon': '#3498db', 
+                'Multi Pon': '#f39c12'
+            }
+        )
+        fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig_pie, use_container_width=True)
         
-        if len(df) == 0:
-            st.warning("⚠️ No data matches current filters. Try adjusting your selection.")
-        else:
-            # Import plotting libraries
-            import plotly.express as px
+        # Show key stats
+        pon_dealers = len(df[df['is_pon_dealer']])
+        multi_pon = len(df[df['dealer_type'] == 'Multi Pon'])
+        st.metric("Pon Dealers", f"{pon_dealers:,}")
+        st.metric("Multi-Pon Risk", f"{multi_pon:,}")
+    
+    with col2:
+        # 2. Brands per Location Distribution
+        brand_dist = df['n_brands'].value_counts().sort_index()[:10]  # Top 10 to avoid clutter
+        fig_bar = px.bar(
+            x=brand_dist.index,
+            y=brand_dist.values,
+            title="Brand Diversity Distribution",
+            labels={'x': 'Brands per Location', 'y': 'Number of Dealers'},
+            color_discrete_sequence=['#3498db']
+        )
+        fig_bar.update_layout(showlegend=False, xaxis_title="Brands per Location", yaxis_title="Number of Dealers")
+        st.plotly_chart(fig_bar, use_container_width=True)
+        
+        # Show diversity metrics
+        avg_brands = df['n_brands'].mean()
+        max_brands = df['n_brands'].max()
+        multi_brand_pct = (df['n_brands'] > 1).mean() * 100
+        st.metric("Avg Brands/Location", f"{avg_brands:.1f}")
+        st.metric("Multi-Brand Locations", f"{multi_brand_pct:.1f}%")
+    
+    # 3. Provincial Analysis (if available)
+    if 'provincie' in df.columns and df['provincie'].notna().sum() > 5:
+        st.write("### 🗺️ Provincial Market Penetration")
+        st.write("*Toont het percentage van alle fietsdealers per provincie die Pon-dealers zijn. Hogere percentages geven een sterkere marktpositie aan.*")
+        
+        # Calculate provincial metrics
+        prov_data = df[df['provincie'].notna()].groupby('provincie').agg({
+            'google_place_id': 'count',
+            'is_pon_dealer': ['sum', 'mean']
+        }).round(2)
+        
+        prov_data.columns = ['total_dealers', 'pon_dealers', 'pon_penetration']
+        prov_data['penetration_pct'] = prov_data['pon_penetration'] * 100
+        prov_data = prov_data.sort_values('penetration_pct', ascending=True)
+        
+        # Create horizontal bar chart
+        fig_prov = px.bar(
+            x=prov_data['penetration_pct'],
+            y=prov_data.index,
+            orientation='h',
+            title="Pon Market Penetration by Province",
+            labels={'x': 'Market Penetration (%)', 'y': 'Province'},
+            color=prov_data['penetration_pct'],
+            color_continuous_scale='RdYlGn',
+            text=prov_data['penetration_pct'].round(1)
+        )
+        fig_prov.update_traces(texttemplate='%{text}%', textposition='outside')
+        fig_prov.update_layout(showlegend=False, height=400)
+        st.plotly_chart(fig_prov, use_container_width=True)
+        
+        # Show top/bottom provinces
+        st.write(f"**🏆 Highest Penetration:** {prov_data.tail(3).index.tolist()}")
+        st.write(f"**🎯 Growth Opportunities:** {prov_data.head(3).index.tolist()}")
+    
+    # 4. Pon Brand Performance (if we have brand data)
+    if 'pon_brands_display' in df.columns:
+        st.write("### 🏆 Pon Brand Network Size")
+        st.write("*Aantal dealerlocaties per Pon-merk. Merken met een groter netwerk hebben betere marktdekking en toegankelijkheid voor klanten.*")
+        
+        # Count Pon brand presence
+        pon_brand_counts = {}
+        for _, row in df[df['is_pon_dealer']].iterrows():
+            brands = str(row.get('pon_brands_display', ''))
+            if brands and brands != 'nan':
+                for brand in brands.split(','):
+                    brand = brand.strip().title()
+                    if brand:
+                        pon_brand_counts[brand] = pon_brand_counts.get(brand, 0) + 1
+        
+        if pon_brand_counts:
+            # Create DataFrame and sort
+            brands_df = pd.DataFrame(list(pon_brand_counts.items()), columns=['Brand', 'Locations'])
+            brands_df = brands_df.sort_values('Locations', ascending=True)
             
-            # Create multi-column layout for analytics
-            analytics_col1, analytics_col2 = st.columns(2)
-            
-            with analytics_col1:
-                # 1. Dealer Type Distribution (Interactive Pie Chart)
-                dealer_type_counts = df['dealer_type'].value_counts()
-                
-                fig_pie = px.pie(
-                values=dealer_type_counts.values, 
-                names=dealer_type_counts.index,
-                title="Dealer Type Distribution",
-                color_discrete_map={
-                    'Non-Pon': '#e74c3c',
-                    'Single Pon': '#3498db', 
-                    'Multi Pon': '#f39c12'
-                }
+            # Create horizontal bar chart
+            fig_brands = px.bar(
+                brands_df,
+                x='Locations',
+                y='Brand',
+                orientation='h',
+                title="Pon Brand Dealer Network",
+                labels={'Locations': 'Number of Dealer Locations', 'Brand': 'Pon Brand'},
+                color='Locations',
+                color_continuous_scale='Blues',
+                text='Locations'
             )
-            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig_pie, use_container_width=True)
-        
-        with analytics_col2:
-            # 2. Multi-Brand Intensity Distribution
-            brand_dist = df['n_brands'].value_counts().sort_index()
-            
-            fig_bar = px.bar(
-                x=brand_dist.index[:15], 
-                y=brand_dist.values[:15],
-                title="Brands per Location Distribution",
-                labels={'x': 'Number of Brands', 'y': 'Number of Locations'},
-                color=brand_dist.values[:15],
-                color_continuous_scale='viridis'
-            )
-            fig_bar.update_layout(showlegend=False)
-            st.plotly_chart(fig_bar, use_container_width=True)
-        
-        # 3. Provincial Analysis (if available)
-        if 'provincie' in df.columns and df['provincie'].notna().sum() > 10:
-            st.write("### 🗺️ Provincial Market Analysis")
-            
-            # Create provincial metrics
-            prov_metrics = df[df['provincie'].notna()].groupby('provincie').agg({
-                'google_place_id': 'count',
-                'is_pon_dealer': ['sum', 'mean'],
-                'n_brands': 'mean',
-                'n_pon_brands': lambda x: (x > 1).sum() if hasattr(x, 'sum') else 0  # Cannibalization count
-            }).round(2)
-            
-            # Flatten column names
-            prov_metrics.columns = ['total_dealers', 'pon_dealers', 'pon_penetration', 'avg_brands', 'cannibalization']
-            prov_metrics['penetration_pct'] = prov_metrics['pon_penetration'] * 100
-            prov_metrics = prov_metrics.reset_index()
-            
-            prov_col1, prov_col2 = st.columns(2)
-            
-            with prov_col1:
-                # Market Penetration by Province
-                prov_sorted = prov_metrics.sort_values('penetration_pct')
-                
-                fig_prov = px.bar(
-                    prov_sorted,
-                    x='penetration_pct',
-                    y='provincie',
-                    orientation='h',
-                    title="Pon Market Penetration by Province",
-                    labels={'penetration_pct': 'Market Penetration (%)', 'provincie': 'Province'},
-                    color='penetration_pct',
-                    color_continuous_scale='RdYlGn',
-                    text='penetration_pct'
-                )
-                fig_prov.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
-                fig_prov.update_layout(showlegend=False, height=400)
-                st.plotly_chart(fig_prov, use_container_width=True)
-            
-            with prov_col2:
-                # Market Complexity by Province
-                complexity_sorted = prov_metrics.sort_values('avg_brands')
-                
-                fig_complex = px.bar(
-                    complexity_sorted,
-                    x='avg_brands',
-                    y='provincie', 
-                    orientation='h',
-                    title="Market Complexity by Province",
-                    labels={'avg_brands': 'Avg Brands per Location', 'provincie': 'Province'},
-                    color='avg_brands',
-                    color_continuous_scale='plasma',
-                    text='avg_brands'
-                )
-                fig_complex.update_traces(texttemplate='%{text:.1f}', textposition='outside')
-                fig_complex.update_layout(showlegend=False, height=400)
-                st.plotly_chart(fig_complex, use_container_width=True)
-        
-        # 4. Pon Brand Performance (if we have brand data)
-        if 'pon_brands_display' in df.columns:
-            st.write("### 🏆 Pon Brand Network Analysis")
-            
-            # Extract individual Pon brands
-            pon_brand_presence = {}
-            PON_BRANDS = ['Gazelle', 'Union', 'Urban Arrow', 'Kalkhoff', 'Cannondale', 'Cervelo', 'Focus', 'Santa Cruz']
-            
-            for _, row in df[df['is_pon_dealer']].iterrows():
-                brands = str(row.get('pon_brands_display', ''))
-                for brand in PON_BRANDS:
-                    if brand in brands:
-                        pon_brand_presence[brand] = pon_brand_presence.get(brand, 0) + 1
-            
-            if pon_brand_presence:
-                brands_df = pd.DataFrame(list(pon_brand_presence.items()), columns=['Brand', 'Locations'])
-                brands_df = brands_df.sort_values('Locations', ascending=True)
-                
-                fig_brands = px.bar(
-                    brands_df,
-                    x='Locations',
-                    y='Brand',
-                    orientation='h',
-                    title="Pon Brand Network Size",
-                    labels={'Locations': 'Number of Locations', 'Brand': 'Pon Brand'},
-                    color='Locations',
-                    color_continuous_scale='viridis',
-                    text='Locations'
-                )
-                fig_brands.update_traces(texttemplate='%{text}', textposition='outside')
-                fig_brands.update_layout(showlegend=False, height=400)
-                st.plotly_chart(fig_brands, use_container_width=True)
-        
-        # 5. Multi-Brand vs Rating Analysis
-        if 'rating' in df.columns and df['rating'].notna().sum() > 50:
-            st.write("### ⭐ Brand Diversity vs Quality Analysis")
-            
-            # Create scatter plot: brands vs rating
-            rating_data = df[df['rating'].notna()].copy()
-            
-            fig_scatter = px.scatter(
-                rating_data,
-                x='n_brands',
-                y='rating',
-                color='dealer_type',
-                size='n_reviews' if 'n_reviews' in rating_data.columns else None,
-                title="Brand Diversity vs Rating Quality",
-                labels={
-                    'n_brands': 'Number of Brands',
-                    'rating': 'Google Rating',
-                    'dealer_type': 'Dealer Type'
-                },
-                color_discrete_map={
-                    'Non-Pon': '#e74c3c',
-                    'Single Pon': '#3498db',
-                    'Multi Pon': '#f39c12'
-                },
-                hover_data=['name'] if 'name' in rating_data.columns else None
-            )
-            fig_scatter.update_layout(height=400)
-            st.plotly_chart(fig_scatter, use_container_width=True)
-    else:
-        st.info("🔄 Multi-brand analytics require the enhanced dataset. Run notebook 07_multi_brand_analysis.ipynb to generate dealers_dashboard.parquet")
+            fig_brands.update_traces(texttemplate='%{text}', textposition='outside')
+            fig_brands.update_layout(showlegend=False, height=300)
+            st.plotly_chart(fig_brands, use_container_width=True)
+
+else:
+    st.info("📊 Multi-brand analytics require the enhanced dataset from notebook 07.")
 
 # Proximity Analysis
 if proximity_kpis is not None:
