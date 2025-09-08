@@ -208,9 +208,9 @@ with col1:
             dealer_name = str(r.get('name', 'Dealer'))
             
             # Format brands - use enhanced display columns if available
-            if 'brands_display' in df.columns and not pd.isna(r.get('brands_display')):
+            if 'brands_display' in location_groups.columns and not pd.isna(r.get('brands_display')):
                 brands = r.get('brands_display', 'Unknown')
-            elif 'brand' in df.columns:
+            elif 'brand' in location_groups.columns:
                 brands = r.get('brand', 'Unknown')
             else:
                 brands = 'Unknown'
@@ -341,7 +341,7 @@ if white_spots is not None:
     
     with col3:
         st.write("**Top White Spots (Areas Underserved by Pon Dealers)**")
-        display_cols = [c for c in ['pc4','gemeente','inwoners','dist_nearest_pon_km','score','policy_index','score_policy','S_dem'] 
+        display_cols = [c for c in ['pc4','gemeente','inwoners','dist_nearest_pon_km','score','policy_index','score_policy'] 
                        if c in ws.columns]
         
         if display_cols:
