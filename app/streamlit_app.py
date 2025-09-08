@@ -11,6 +11,32 @@ st.title('🚴‍♀️ Pon Bike Nederland - Dealer Network Dashboard')
 # Sidebar with enhanced filters
 st.sidebar.title('🔧 Filters & Controls')
 
+# Add explanation section
+with st.sidebar.expander("ℹ️ **Hoe werken deze filters?**", expanded=True):
+    st.markdown("""
+    **🏷️ Select Brands**  
+    Kies specifieke Pon-merken om te bekijken. Laat leeg voor alle merken.
+    *Gebruik: Focus op één merk voor merkspecifieke analyse*
+    
+    **📏 Coverage Radius**  
+    Stel de serviceradius in (km). Standaard 7.5km = fietsafstand.
+    *Gebruik: Test verschillende serviceniveaus (5km stad, 10km ruraal)*
+    
+    **🌿 ZE-Zones only**  
+    Toon alleen dealers in zero-emissie zones (vanaf 2025).
+    *Gebruik: Focus op duurzame mobiliteit hotspots*
+    
+    **⭕ Coverage Rings**  
+    Visualiseer servicebereik rond Pon-dealers.
+    *Gebruik: Identificeer overlappende servicegebieden*
+    
+    **🎯 Pon Dealers Only**  
+    Verberg concurrenten, toon alleen Pon-netwerk.
+    *Gebruik: Interne netwerkanalyse zonder marktruis*
+    """)
+
+st.sidebar.markdown("---")
+
 @st.cache_data
 def load_csv(path):
     """Load CSV with caching and error handling"""
@@ -85,6 +111,27 @@ col1, col2 = st.columns([3, 1])
 
 with col1:
     st.subheader('🗺️ Dealer Network Map')
+    
+    with st.expander("ℹ️ **Hoe lees je deze kaart?**"):
+        st.markdown("""
+        **Kleurcodering:**
+        - 🔵 **Blauwe markers** = Pon dealers (Gazelle, Urban Arrow, etc.)
+        - 🔴 **Rode markers** = Concurrenten (niet-Pon merken)
+        
+        **Markergrootte:**
+        - Grote markers = Pon dealers (belangrijker voor ons netwerk)
+        - Kleine markers = Concurrenten
+        
+        **Groene cirkels** (indien aan):
+        - Tonen het servicebereik rond Pon dealers
+        - Radius instelbaar via slider (standaard 7.5km)
+        - Overlappende cirkels = mogelijke kannibalisatie
+        
+        **Tips:**
+        - Klik op markers voor dealer details (naam, merk, rating)
+        - Zoom in voor straatnauwkeurigheid
+        - Gebruik filters links om specifieke scenario's te testen
+        """)
     
     if dealers is not None and not df.empty:
         # Create map
@@ -164,6 +211,30 @@ with col2:
 # White Spots Analysis
 st.subheader('🎯 White Spots Analysis')
 
+with st.expander("ℹ️ **Wat zijn white spots?**"):
+    st.markdown("""
+    **White spots** zijn gebieden waar Pon onvoldoende aanwezig is:
+    
+    **Definitie:**
+    - Postcodegebieden >7.5km van dichtstbijzijnde Pon dealer
+    - Ondervertegenwoordigd t.o.v. concurrentie
+    - Groeipotentieel op basis van bevolkingsdichtheid
+    
+    **Kolommen uitleg:**
+    - **pc4**: Postcode gebied
+    - **gemeente**: Gemeente naam
+    - **inwoners**: Aantal inwoners in dit gebied
+    - **dist_nearest_pon_km**: Afstand tot dichtstbijzijnde Pon dealer
+    - **score**: Prioriteitsscore (hoger = belangrijker)
+    - **policy_index**: ZE-zone beleidsscore (0-1)
+    - **S_dem**: Demografische geschiktheidsscore
+    
+    **Actiepunten:**
+    - Top 10 zijn prioriteit voor netwerkuitbreiding
+    - Focus op gebieden met hoge score EN veel inwoners
+    - ZE-zones (policy_index > 0.8) extra belangrijk voor Urban Arrow
+    """)
+
 if white_spots is not None:
     # Filter white spots by ZE-zones if enabled
     ws = white_spots.copy()
@@ -222,6 +293,28 @@ if gemeente_kpis is not None:
 # Proximity Analysis
 if proximity_kpis is not None:
     st.subheader('🔄 Cannibalization Analysis')
+    
+    with st.expander("ℹ️ **Wat is kannibalisatie?**"):
+        st.markdown("""
+        **Kannibalisatie** meet hoeveel dealers elkaar beconcurreren:
+        
+        **Pon-to-Pon (Interne Competitie):**
+        - Aantal andere Pon dealers binnen bepaalde afstand
+        - Hoge waarden = dealers "vechten" om dezelfde klanten
+        - Ideaal: 3-5 dealers binnen 10km (service zonder overlap)
+        - Probleem bij >8 dealers binnen 7.5km
+        
+        **Pon-to-Competitor (Externe Competitie):**
+        - Aantal concurrent dealers binnen bepaalde afstand
+        - Hoge waarden = sterke marktconcurrentie
+        - Benchmark: gemiddeld 12.8 concurrenten binnen 10km
+        
+        
+        **Interpretatie:**
+        - Interne > Externe = veel eigen dealers (Union/Gazelle)
+        - Externe > Interne = gezonde marktpositie
+        - Beiden hoog = verzadigde markt (Randstad)
+        """)
     
     col7, col8 = st.columns(2)
     
