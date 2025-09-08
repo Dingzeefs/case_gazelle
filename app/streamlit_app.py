@@ -1,64 +1,267 @@
 
 import streamlit as st
 import pandas as pd
-from streamlit_folium import st_folium
 import folium
+from streamlit_folium import st_folium
+from pathlib import Path
 
-st.set_page_config(page_title='Pon Bike – Dealer Network', layout='wide')
-st.title('Pon Bike – Dealer Network Explorer')
+st.set_page_config(page_title='Pon Bike NL - Network Analysis Dashboard', layout='wide')
+st.title('🚴‍♀️ Pon Bike Nederland - Dealer Network Dashboard')
 
-radius_km = st.sidebar.slider('Radius (km)', 5.0, 12.0, 7.5, 0.5)
-brand = st.sidebar.multiselect('Merken (PON)', ['Gazelle','Cannondale','Kalkhoff','Urban Arrow','Cervélo','Focus','Santa Cruz'])
-ze_only = st.sidebar.checkbox('Toon alleen ZE-steden (policy)', value=False)
+# Sidebar with enhanced filters
+st.sidebar.title('🔧 Filters & Controls')
 
-try:
-    dealers = pd.read_parquet('data/processed/dealers.parquet')
-except Exception:
-    dealers = pd.read_csv('dealer_lijst.csv')
+@st.cache_data
+def load_csv(path):
+    """Load CSV with caching and error handling"""
+    return pd.read_csv(path, dtype={'pc4': str}) if Path(path).exists() else None
 
-if 'brand_clean' in dealers.columns and brand:
-    dealers = dealers[dealers['brand_clean'].isin([b.lower() for b in brand])]
+@st.cache_data
+def load_parquet(path):
+    """Load parquet with caching"""
+    return pd.read_parquet(path) if Path(path).exists() else None
 
-lat = dealers['google_lat'].dropna().astype(float).median() if 'google_lat' in dealers else 52.1
-lng = dealers['google_lng'].dropna().astype(float).median() if 'google_lng' in dealers else 5.3
-m = folium.Map(location=[lat, lng], zoom_start=7)
+# Load all datasets
+dealers = load_parquet('data/processed/dealers.parquet')
+if dealers is None:
+    dealers = load_csv('data/raw/dealer_lijst.csv')
 
-for _, r in dealers.dropna(subset=['google_lat','google_lng']).iterrows():
-    color = 'blue' if r.get('is_pon_dealer', False) else 'gray'
-    folium.CircleMarker([float(r['google_lat']), float(r['google_lng'])], radius=3, color=color, fill=True, fill_opacity=0.7).add_to(m)
+white_spots = load_csv('outputs/tables/white_spots_with_policy.csv')
+if white_spots is None:
+    white_spots = load_csv('outputs/tables/white_spots_ranked.csv')
 
-st_folium(m, width=1100, height=700)
+gemeente_kpis = load_csv('outputs/tables/kpi_overview.csv')
+coverage_overall = load_csv('outputs/tables/coverage_overall.csv')
+policy_index = load_csv('outputs/tables/policy_index.csv')
+proximity_kpis = load_csv('outputs/tables/proximity_kpis.csv')
+ua_intl = load_csv('outputs/tables/ua_intl_shortlist.csv')
 
-# Policy-aware white spots table
-ws_path = 'outputs/tables/white_spots_with_policy.csv'
-ws_base = 'outputs/tables/white_spots_ranked.csv'
-pol_path = 'outputs/tables/policy_index.csv'
-try:
-    ws = pd.read_csv(ws_path)
-except Exception:
-    try:
-        ws = pd.read_csv(ws_base)
-    except Exception:
-        ws = None
-
-st.subheader('White-spots (policy-aware indien beschikbaar)')
-if ws is not None:
-    # Attach gemeente/policy if possible
-    if 'policy_index' not in ws.columns and pd.io.common.file_exists(pol_path):
-        try:
-            pol = pd.read_csv(pol_path)
-            # if ws has gemeente column, join; otherwise show without
-            if 'gemeente' in ws.columns:
-                ws = ws.merge(pol[['gemeente','policy_index']], on='gemeente', how='left')
-        except Exception:
-            pass
-    # Filter ZE-only if gemeente available
-    if ze_only and 'policy_index' in ws.columns:
-        ws = ws[ws['policy_index'].fillna(0) >= 0.8]
-    # Show top rows
-    cols = [c for c in ['pc4','gemeente','inwoners','dist_nearest_pon_km','score','policy_index','score_policy'] if c in ws.columns]
-    st.dataframe(ws[cols].head(50))
+# Enhanced Sidebar Filters
+if dealers is not None and 'brand_clean' in dealers.columns:
+    brands = sorted([b for b in dealers['brand_clean'].dropna().unique() if b])
+    pon_brands = ['gazelle', 'cannondale', 'union', 'kalkhoff', 'urban_arrow', 'cervélo', 'cervelo', 'focus', 'santa_cruz']
+    pon_display = [b.title().replace('_', ' ') for b in pon_brands if b in brands]
+    selected_brands = st.sidebar.multiselect('🏷️ Select Brands', pon_display, default=[])
+    selected_brands_clean = [b.lower().replace(' ', '_') for b in selected_brands]
 else:
-    st.info('Run notebooks/02_coverage.ipynb en src/build_policy_index.py om white-spots en policy te genereren.')
+    selected_brands_clean = []
 
-st.caption('Tip: run notebooks/02_coverage.ipynb voor white-spots en proximity KPI\'s. Policy: src/build_policy_index.py.')
+radius_km = st.sidebar.slider('📏 Coverage Radius (km)', 1.0, 15.0, 7.5, 0.5)
+ze_only = st.sidebar.checkbox('🌿 Show ZE-Zones only (policy ≥ 0.8)', False)
+show_rings = st.sidebar.checkbox('⭕ Show Coverage Rings', True)
+show_pon_only = st.sidebar.checkbox('🎯 Show Pon Dealers Only', False)
+
+# Data filtering
+if dealers is not None:
+    df = dealers.copy()
+    
+    # Brand filtering
+    if selected_brands_clean:
+        df = df[df['brand_clean'].isin(selected_brands_clean)]
+    
+    # Pon only filtering
+    if show_pon_only:
+        df = df[df.get('is_pon_dealer', False)]
+    
+    # ZE-zone filtering - need to map PC4 to gemeente first
+    if policy_index is not None and ze_only:
+        if 'pc4' in df.columns:
+            # Load demographic data to get PC4->gemeente mapping
+            demo = load_parquet('data/processed/demografie.parquet')
+            if demo is not None and 'gemeente' in demo.columns:
+                # Map PC4 to gemeente
+                pc4_gemeente = demo[['pc4', 'gemeente']].drop_duplicates()
+                df = df.merge(pc4_gemeente, on='pc4', how='left')
+                # Now filter by ZE-zones
+                df = df.merge(policy_index[['gemeente','policy_index']], on='gemeente', how='left')
+                df = df[df['policy_index'].fillna(0) >= 0.8]
+        
+        # If we can't do the mapping, show message
+        if len(df) == 0 and ze_only:
+            st.sidebar.info("ZE-zone filtering requires gemeente mapping. No dealers found in ZE-zones.")
+
+# Dashboard Layout
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    st.subheader('🗺️ Dealer Network Map')
+    
+    if dealers is not None and not df.empty:
+        # Create map
+        center = [52.2, 5.3]  # Netherlands center
+        m = folium.Map(location=center, zoom_start=8, tiles='cartodbpositron')
+        
+        # Add dealer markers
+        for _, r in df.dropna(subset=['google_lat','google_lng']).iterrows():
+            is_pon = r.get('is_pon_dealer', False)
+            color = '#1f77b4' if is_pon else '#d62728'
+            popup_text = f"{r.get('name', 'Dealer')}<br>Brand: {r.get('brand', 'Unknown')}<br>Rating: {r.get('rating', 'N/A')}"
+            
+            folium.CircleMarker(
+                [float(r['google_lat']), float(r['google_lng'])],
+                radius=5 if is_pon else 3,
+                color=color,
+                fill=True,
+                fillOpacity=0.8 if is_pon else 0.5,
+                popup=popup_text,
+                tooltip=r.get('brand', 'Dealer')
+            ).add_to(m)
+        
+        # Add coverage rings for Pon dealers
+        if show_rings and not show_pon_only:
+            pon_df = df[df.get('is_pon_dealer', False)].dropna(subset=['google_lat','google_lng']).head(300)  # Limit for performance
+            for _, r in pon_df.iterrows():
+                lat, lng = float(r['google_lat']), float(r['google_lng'])
+                folium.Circle(
+                    [lat, lng], 
+                    radius=radius_km*1000, 
+                    color='green', 
+                    fill=False, 
+                    weight=1, 
+                    opacity=0.3
+                ).add_to(m)
+        
+        st_folium(m, use_container_width=True, height=600)
+    else:
+        st.info("No dealer data available or no dealers match current filters.")
+
+with col2:
+    st.subheader('📊 Key Metrics')
+    
+    if dealers is not None:
+        # For proper market share, we need to load the all brands data
+        dealers_all_brands = load_parquet('data/processed/dealers_all_brands.parquet')
+        
+        if dealers_all_brands is not None:
+            # Calculate relationship-based market share (the correct metric)
+            total_relationships = len(dealers_all_brands)
+            pon_relationships = len(dealers_all_brands[dealers_all_brands.get('is_pon_dealer', False)]) if 'is_pon_dealer' in dealers_all_brands.columns else 0
+            true_market_share = (pon_relationships / total_relationships * 100) if total_relationships > 0 else 0
+            
+            # Also show location-based metrics
+            total_locations = len(df)
+            pon_locations = len(df[df.get('is_pon_dealer', False)]) if 'is_pon_dealer' in df.columns else 0
+            location_presence = (pon_locations / total_locations * 100) if total_locations > 0 else 0
+            
+            st.metric("Total Locations", f"{total_locations:,}")
+            st.metric("Pon Locations", f"{pon_locations:,}")
+            st.metric("Pon Market Share", f"{true_market_share:.1f}%", 
+                     help="Based on brand-dealer relationships (22.3%)")
+            st.metric("Location Presence", f"{location_presence:.1f}%",
+                     help="% of locations with Pon brands (47.0%)")
+        else:
+            # Fallback to location-based only
+            total_dealers = len(df)
+            pon_dealers = len(df[df.get('is_pon_dealer', False)]) if 'is_pon_dealer' in df.columns else 0
+            pon_share = (pon_dealers / total_dealers * 100) if total_dealers > 0 else 0
+            
+            st.metric("Total Dealers", f"{total_dealers:,}")
+            st.metric("Pon Dealers", f"{pon_dealers:,}")
+            st.metric("Location Presence", f"{pon_share:.1f}%",
+                     help="Location-based, not true market share")
+        
+
+# White Spots Analysis
+st.subheader('🎯 White Spots Analysis')
+
+if white_spots is not None:
+    # Filter white spots by ZE-zones if enabled
+    ws = white_spots.copy()
+    if ze_only and policy_index is not None and 'gemeente' in ws.columns:
+        if 'policy_index' not in ws.columns:
+            ws = ws.merge(policy_index[['gemeente','policy_index']], on='gemeente', how='left')
+        ws = ws[ws['policy_index'].fillna(0) >= 0.8]
+    
+    col3, col4 = st.columns([2, 1])
+    
+    with col3:
+        st.write("**Top White Spots (Areas Underserved by Pon Dealers)**")
+        display_cols = [c for c in ['pc4','gemeente','inwoners','dist_nearest_pon_km','score','policy_index','score_policy','S_dem'] 
+                       if c in ws.columns]
+        
+        if display_cols:
+            # Format the dataframe for display
+            ws_display = ws[display_cols].head(20).copy()
+            if 'dist_nearest_pon_km' in ws_display.columns:
+                ws_display['dist_nearest_pon_km'] = ws_display['dist_nearest_pon_km'].round(1)
+            if 'policy_index' in ws_display.columns:
+                ws_display['policy_index'] = ws_display['policy_index'].round(2)
+            
+            st.dataframe(ws_display, use_container_width=True)
+        else:
+            st.info("White spots data available but missing expected columns.")
+    
+    with col4:
+        if len(ws) > 0:
+            st.metric("Total White Spots", f"{len(ws):,}")
+            total_underserved = ws['inwoners'].sum() if 'inwoners' in ws.columns else 0
+            st.metric("Underserved Population", f"{total_underserved:,}")
+            
+            if 'dist_nearest_pon_km' in ws.columns:
+                avg_distance = ws['dist_nearest_pon_km'].mean()
+                st.metric("Avg Distance to Pon", f"{avg_distance:.1f} km")
+else:
+    st.info("Run `notebooks/02_coverage.ipynb` to generate white spots analysis.")
+
+# KPI Overview
+if gemeente_kpis is not None:
+    st.subheader('🏘️ Municipality KPIs')
+    
+    col5, col6 = st.columns(2)
+    
+    with col5:
+        st.write("**Top 10 Best Served Municipalities**")
+        top_served = gemeente_kpis.nlargest(10, 'dealers_per_100k')[['gemeente', 'dealers_per_100k', 'pon_share']]
+        st.dataframe(top_served, use_container_width=True)
+    
+    with col6:
+        st.write("**Top 10 Underserved Municipalities**") 
+        underserved = gemeente_kpis.nsmallest(10, 'dealers_per_100k')[['gemeente', 'dealers_per_100k', 'pon_share']]
+        st.dataframe(underserved, use_container_width=True)
+
+# Proximity Analysis
+if proximity_kpis is not None:
+    st.subheader('🔄 Cannibalization Analysis')
+    
+    col7, col8 = st.columns(2)
+    
+    with col7:
+        st.write("**Pon-to-Pon Proximity (Internal Competition)**")
+        st.dataframe(proximity_kpis[['ring_km', 'pon_near_pon']], use_container_width=True)
+    
+    with col8:
+        st.write("**Pon-to-Competitor Proximity (External Competition)**") 
+        st.dataframe(proximity_kpis[['ring_km', 'pon_near_nonpon']], use_container_width=True)
+
+
+
+# Footer with instructions
+st.markdown("---")
+st.caption("""
+**📝 Usage Instructions:**
+- Use sidebar filters to explore different brand combinations and coverage scenarios
+- Toggle ZE-zones to see policy-aligned opportunities
+- Coverage rings show 7.5km radius around Pon dealers
+- White spots indicate areas >7.5km from nearest Pon dealer
+- Download CSV files for detailed analysis
+
+**🔄 Data Refresh:** Run notebooks in order (01→02→03→04→05) to update analysis
+""")
+
+# Debug info (hidden by default)
+with st.expander("🔍 Debug Information"):
+    st.write("**Data Loading Status:**")
+    st.write(f"- Dealers: {'✅ Loaded' if dealers is not None else '❌ Missing'}")
+    st.write(f"- White Spots: {'✅ Loaded' if white_spots is not None else '❌ Missing'}")
+    st.write(f"- Municipality KPIs: {'✅ Loaded' if gemeente_kpis is not None else '❌ Missing'}")
+    st.write(f"- Coverage Data: {'✅ Loaded' if coverage_overall is not None else '❌ Missing'}")
+    st.write(f"- Policy Index: {'✅ Loaded' if policy_index is not None else '❌ Missing'}")
+    st.write(f"- Proximity KPIs: {'✅ Loaded' if proximity_kpis is not None else '❌ Missing'}")
+    st.write(f"- International Data: {'✅ Loaded' if ua_intl is not None else '❌ Missing'}")
+    
+    if dealers is not None:
+        st.write(f"**Filtered Data:** {len(df):,} dealers shown")
+        if 'brand_clean' in df.columns:
+            brand_counts = df['brand_clean'].value_counts()
+            st.write("**Brand Distribution:**")
+            st.write(brand_counts)
