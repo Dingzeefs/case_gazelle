@@ -179,8 +179,10 @@ with col1:
                 'is_pon_dealer': 'any'
             }
             
-            # Add brand aggregation if exists
-            if 'brand' in df.columns:
+            # Add brand aggregation - prefer brands_display if available
+            if 'brands_display' in df.columns:
+                agg_dict['brands_display'] = 'first'
+            elif 'brand' in df.columns:
                 agg_dict['brand'] = lambda x: ', '.join(sorted(set(str(b) for b in x if pd.notna(b))))
             
             # Add rating aggregation if exists
@@ -205,8 +207,14 @@ with col1:
             # Format dealer name
             dealer_name = str(r.get('name', 'Dealer'))
             
-            # Format brands
-            brands = r.get('brand', 'Unknown')
+            # Format brands - use enhanced display columns if available
+            if 'brands_display' in df.columns and not pd.isna(r.get('brands_display')):
+                brands = r.get('brands_display', 'Unknown')
+            elif 'brand' in df.columns:
+                brands = r.get('brand', 'Unknown')
+            else:
+                brands = 'Unknown'
+            
             if pd.isna(brands) or brands == '':
                 brands = 'Unknown'
             
@@ -242,7 +250,7 @@ with col1:
         
         # Add coverage rings for Pon dealers
         if show_rings and not show_pon_only:
-            pon_df = df[df.get('is_pon_dealer', False)].dropna(subset=['google_lat','google_lng']).head(300)  # Limit for performance
+            pon_df = df[df.get('is_pon_dealer', False)].dropna(subset=['google_lat','google_lng'])  # All Pon dealers
             for _, r in pon_df.iterrows():
                 lat, lng = float(r['google_lat']), float(r['google_lng'])
                 folium.Circle(
