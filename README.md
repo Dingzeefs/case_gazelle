@@ -1,214 +1,227 @@
-# Gazelle / Pon Bike – Marktanalyse en Dealernetwerk (Case)
+# Pon Bike Nederland - Dealer Network Analysis
 
-Dit project helpt om in 2 dagen van ruwe data naar een board-ready advies te komen. We houden het simpel en stap-voor-stap. Geschikt voor junior data scientists.
+Een data science case voor het analyseren van het fietsdealer netwerk in Nederland. Het project onderzoekt waar Pon te veel, goed of juist weinig aanwezig is en geeft strategisch advies over het dealernetwerk.
 
-## Doel
-- Antwoord geven op: waar zijn we te veel / goed / weinig aanwezig?
-- Hoe doet Pon (merken) het vs concurrenten?
-- Waar liggen white spots (zonder goede dekking)?
-- Wat leren we van Urban Arrow als benchmark?
+## Wat zit er in dit project
 
-## Data
-- `dealer_lijst.csv`: winkels en merken. Eén winkel kan meerdere regels hebben (per merk). Unieke sleutel: `google_place_id`.
-- `demografie.csv`: inwoners en demografie per postcode (CBS).(dealers en merken in NL), (CBS-demografie per postcode) (inkomens, huishoudens, leeftijden, gezinnen etc)  Weet dat voor de data, betekenis -99997 =  '0 - 4 / geheim / niet aanwezig'.
+Het project analyseert 2,080 fietswinkels in Nederland waarvan 978 Pon dealers zijn. We kijken naar dekking, concurrentie, white spots en geven advies voor internationale expansie en portfolio strategie.
 
-## Kernbegrippen (simpele definities)
-- **Dealer (uniek)**: één winkel (gebaseerd op `google_place_id`).
-- **Pon-merken**: Gazelle, Cannondale, Union, Kalkhoff, Urban Arrow, Cervélo, Focus, Santa Cruz.
-- **Coverage (dekking)**: % inwoners binnen een afstand (R km) van een dealer (Pon of merk-specifiek).
-- **White spot**: gebied waar inwoners buiten R km van een Pon-dealer wonen.
-- **Dealers per 100k inwoners**: #dealers / inwoners * 100000.
-- **Pon-share**: #Pon-dealers / #alle dealers.
-- **Concurrentie-intensiteit**: verhouding Pon vs niet-Pon dealers.
+### Belangrijke bevindingen
+- Marktaandeel: 22.3% (op basis van brand-dealer relaties)
+- Coverage: 97.2% van de bevolking binnen 7.5km van een Pon dealer
+- White spots: 66 gebieden met 289k inwoners ondervertegenwoordigd
+- Multi-brand realiteit: 67.5% van alle dealers verkoopt meerdere merken
 
-## KPI's die we rapporteren
-- Dealers per 100k (totaal, Pon, per merk)
-- Pon-share bij dealers (per regio)
-- Coverage vs benchmark (Urban Arrow)
-- White-spots: aantal en inwoners
-- Concurrentie-intensiteit: Pon t.o.v. niet-Pon
- - Dealerkwaliteit (proxy): `avg_rating * log(1 + reviews)`
+## Data bronnen
 
-## Stappenplan
-1) **Data inlezen en schoonmaken**
-   - CSV inlezen, leegtes/duplicaten controleren
-   - CSV inlezen (inwoners per postcode)
-   - Unieke dealers maken: groeperen op `google_place_id`
-   - Merkenlijst per dealer maken; Pon-vlag toevoegen
+**Raw data (data/raw/)**
+- `dealer_lijst.csv` - 6,748 brand-dealer relaties met Google Places data
+- `demografie.csv` - CBS demografische data voor 4,073 postcodegebieden
+- Let op: CBS waarde -99997 betekent missing/geheim
 
-2) **Regio-koppeling**
-   - Postcode aan gemeente/provincie koppelen (via referentietabel)
-   - Inwoners per gemeente/provincie optellen
+**External data (data/external/)**
+- `Woonplaatsen_in_Nederland_2024.csv` - Plaats naar gemeente/provincie mapping
+- `ze_steden.csv` - 29 steden met zero-emissie zones (2025-2028)
 
-3) **KPI-berekening per regio**
-   - Dealers per 100k (totaal, Pon, per merk)
-   - Pon-share en concurrentie-intensiteit
+## Notebooks uitleg
 
-4) **Coverage-model** (simpel, snel)
-   - Voor elke postcode berekenen: afstand tot dichtstbijzijnde Pon-dealer en per merk
-   - R (radius) start = 7.5 km overal
-   - Coverage% = % inwoners binnen R van een Pon-dealer
-   - White-spots = postcodes buiten R, som inwoners
+### 01_dataprep.ipynb
+**Wat doet het:** Maakt schone datasets van de ruwe dealer en demografische data.
 
-5) **Urban Arrow benchmark**
-   - UA-dealers selecteren
-   - UA-coverage berekenen (zelfde methode)
-   - Target afleiden (bv. 80% landelijk); vergelijken met Pon
+**Belangrijkste stappen:**
+1. Leest dealer_lijst.csv en verwijdert duplicaten op basis van google_place_id
+2. Identificeert Pon merken (Gazelle, Urban Arrow, Cannondale, etc.)
+3. Aggregeert multi-brand dealers naar unieke locaties
+4. Koppelt demografische data aan postcodes
+5. Maakt clustering van 5 demografische segmenten
 
-6) **Over-/onderbediend label**
-   - Vergelijk regio’s met NL-gemiddelde of UA-target
-   - Onderbediend = duidelijk lager dan referentie; overbediend = duidelijk hoger
+**Output:**
+- `dealers.parquet` - 2,080 unieke dealer locaties
+- `dealers_all_brands.parquet` - 6,748 brand-dealer relaties (voor marktaandeel)
+- `demografie.parquet` - Schone demografische data met clusters
 
-7) **Prioriteit white-spots**
-   - Rangschik op: inwoners (hoog is beter), afstand tot Pon-dealer (ver is beter), weinig concurrentie
-   - Top-gebieden met voorstel: nieuw openen of dealer converteren
+### 02_coverage.ipynb
+**Wat doet het:** Berekent hoe goed Nederland gedekt is door Pon dealers.
 
-8) **Visualisaties en dashboard**
-   - Kaarten: choropleths (dealers/100k, coverage), puntenkaart dealers
-   - Grafieken: bar (top onderbediende), scatter (coverage vs concurrentie)
-   - Dashboard met filters: merk, regio (Streamlit)
+**Belangrijkste stappen:**
+1. Gebruikt Haversine formule voor afstandsberekening tussen postcodes en dealers
+2. Maakt KD-tree voor snelle nearest neighbor search
+3. Berekent coverage percentages voor verschillende afstanden (5-15km)
+4. Identificeert white spots (gebieden >7.5km van Pon dealer)
+5. Analyseert dealer proximity voor kannibalisatie risico
 
-9) **Slides (≤ 15 min)**
-   - Waar staan we? (huidige positie)
-   - Coverage en white-spots (impact)
-   - Concurrentiepositie
-   - Advies en roadmap (concrete vervolgstappen)
+**Output:**
+- `coverage_overall.csv` - Coverage percentages per radius
+- `white_spots_ranked.csv` - 66 ondervertegenwoordigde gebieden
+- `proximity_kpis.csv` - Kannibalisatie vs concurrentie metrics
 
-## Map-structuur
-- `data/raw/`: originele data (CSV/XLSX)
-- `data/processed/`: tussenresultaten
-- `notebooks/`: analyses per stap
-- `src/`: herbruikbare functies (geo, coverage, kpis)
-- `outputs/`: figuren en tabellen
-- `dashboard/`: dashboard-bestanden
+### 03_kpis_viz.ipynb
+**Wat doet het:** Berekent KPIs per gemeente en provincie voor management rapportage.
 
-## Benodigde Python-pakketten
-Zie `requirements.txt`.
+**Belangrijkste stappen:**
+1. Aggregeert dealers naar gemeente en provincie niveau
+2. Berekent dealers per 100k inwoners
+3. Berekent Pon market share per regio
+4. Maakt visualisaties voor board presentatie
+5. Identificeert top/bottom performers
 
-## Aannames en beperkingen
-- Unieke dealer = `google_place_id`
-- Afstand = hemelsbreed, geen reistijd
-- R = 7.5 km (gevoeligheidsanalyse kan later)
-- Data kan onvolledig zijn (ratings, adressen); we documenteren dit
- - Geen omzetclaims: we gebruiken publieke proxies (CBS inkomen, urbanisatie, modal split, ZE‑beleid)
+**Output:**
+- `gemeente_kpis.csv` - KPIs voor 817 gemeenten
+- `provincie_kpis.csv` - KPIs voor 7 provincies
+- Diverse PNG visualisaties voor presentatie
 
-## Next steps (technisch)
-- Notebook `01_dataprep.ipynb`: inlezen, schoonmaken, koppelen
-- Notebook `02_coverage.ipynb`: coverage + white-spots
-- Notebook `03_kpis_viz.ipynb`: KPI’s, grafieken, tabellen
-- Exporteer figuren/tabellen naar `outputs/`
-- Bouw dashboard (Tableau/Power BI/Excel)
-- Maak slides en lever op
+### 04_enrichment.ipynb
+**Wat doet het:** Voegt externe data toe zoals zero-emissie zones.
 
-## Beantwoording verplichte casevragen (wat en waar in dit plan)
+**Belangrijkste stappen:**
+1. Integreert 29 ZE-zone steden met policy index
+2. Koppelt policy scores aan white spots
+3. Prioriteert gebieden op basis van beleid
+4. Analyseert cargo bike potentieel in ZE zones
 
-- Over-/onder-/goed bediend: via `coverage` (R=7.5 km) en KPI’s per regio (dealers/100k, Pon‑share, concurrentie). Visuals: choropleths + white‑spots. Zie secties: Stappen 3–4–6–7 en “Visualisaties en dashboard”.
-- Urban Arrow internationaal advies: UA als benchmark (stap 5) en framework in “Advies voor Urban Arrow – uitrol in vergelijkbaar land”. Focus op vergelijkbare stedelijke dichtheid en ZE/LEZ‑beleid.
-- Portfolio-advies (stoppen/toevoegen) met CSR/policy: “Extra strategische onderdelen”, “Portfolio‑matrix”, en weging in prioriteringsscore. CSR/policy argumenten geborgd via ZE‑policy integratie (zie hieronder).
+**Output:**
+- `policy_index.csv` - Beleidsscores per gemeente
+- `white_spots_with_policy.csv` - White spots met policy weging
 
-## Policy/ZE (Zero‑Emissie) integratie
+### 05_intl_shortlist.ipynb
+**Wat doet het:** Analyseert internationale expansie mogelijkheden voor Urban Arrow.
 
-- Bron: `data/external/ze_steden.csv` (uit Dutch Cycling Embassy‑rapport). Hieruit bouwen we `outputs/tables/policy_index.csv` met startdatum en `policy_index` per gemeente.
-- Gebruik: `policy_index` weegt mee in white‑spot/prioriteringsscore (hogere score in ZE‑steden en vroege startjaren). Ook als kaartlaag (toggle) in dashboard/slides.
-- Koppeling: gemeente‑niveau (optioneel PC4 indien mapping beschikbaar). Zie scripts: `src/build_policy_index.py`, `src/fetch_external.py` (hardened fetch, optioneel).
+**Belangrijkste stappen:**
+1. Verzamelt cycling modal share data voor Europa
+2. Analyseert steden vergelijkbaar met Nederlandse UA success stories
+3. Berekent opportunity scores op basis van dichtheid, beleid, fiets cultuur
 
-## UA‑international (data‑science, proxies en outputs)
 
-- Doel: transfer van NL‑succes naar vergelijkbare steden/landen met publieke proxies (geen omzetclaims).
-- Proxies per stad/metro: urbanisatie/dichtheid (Eurostat/OECD), ZE/LEZ‑beleid (policy‑flag), fiets‑modal share/bike‑friendliness (publieke index), inkomen/koopkracht (OECD/Eurostat), OSM/Overpass POIs (retail/HoReCa/logistics) en (proxy) fietsinfra‑dichtheid.
-- Similarity‑score t.o.v. NL‑benchmark: w(dichtheid, policy, modal, inkomen, POI/infra). Resultaat: shortlist top‑N steden.
-- Coverage‑simulatie: NL‑radius (5/7.5/10/12 km) → schatting #dealers tot target per stad; guardrails met proximity (kannibalisatie laag houden).
-- Deliverables: `outputs/tables/ua_intl_shortlist.csv` (scores, policy‑flag, gap→#dealers); figuur (top‑steden); 3 pilotsteden + KPI’s.
-- Notebook: `notebooks/05_intl_shortlist.ipynb` (fetch/scrape → score → export). 
+**Output:**
+- `ua_intl_shortlist.csv` - Top steden voor UA expansie
+- `ua_intl_academic_analysis.csv` - Wetenschappelijke onderbouwing
 
-## CSR en politieke overwegingen (hoe we dit meenemen)
+### 06_portfolio_advies.ipynb
+**Wat doet het:** Geeft strategisch advies over het brand portfolio.
 
-- Definitie (praktisch): bijdrage aan emissiereductie (ZE/LEZ), stedelijke leefbaarheid/ruimte, duurzame mobiliteit, en lokale economische effecten (werkgelegenheid/servicecapaciteit). Politiek: alignment met gemeentelijke/transitie‑agenda’s.
-- Model‑representatie: `policy_index` (ZE/LEZ) als expliciete feature; stedelijkheid/dichtheid als leefbaarheid/footfall‑proxy; proximity‑guardrails om overlast/saturatie te beperken.
-- Gebruik in beslisboom: bij gelijke “data‑score” krijgt scenario met hogere CSR/policy‑waarde de voorkeur (bijv. UA in ZE‑stad). In portfolio‑advies kan een merk met lage incremental coverage maar hoge CSR‑waarde toch “behouden/opschalen” zijn in specifieke segmenten.
+**Belangrijkste stappen:**
+1. Analyseert brand performance (dealers, ratings, reviews)
+2. Meet kannibalisatie tussen Pon merken
+3. Berekent incremental coverage per merk
+4. Geeft expand/maintain/evaluate advies per merk
 
-## Uitbreidingen op plan (onderzoek + techniek)
+**Output:**
+- `portfolio_recommendations.csv` - Strategisch advies per merk
+- `multi_pon_dealers.csv` - Dealers met meerdere Pon merken
 
-- Onderzoekssamenvattingen (Cargo‑bike/ZEZ, Urban Arrow, Pon.Bike):
-  - In grote steden neemt de beleidsdruk (ZE/LEZ) snel toe. Prioriteer ZE‑steden en vroege startjaren in de uitrol; gebruik `policy_index` als vermenigvuldigingsfactor in de score.
-  - Urban Arrow: premium en service‑intensief, focus op dichte stedelijke kernen; hanteer cannibalisatie‑guardrails door minimale afstand tussen UA‑dealers (bijv. 3–5 km ringen) te respecteren.
-  - Portfolio‑differentiatie: merken bedienen verschillende doelgroepen. Gebruik merk‑specifieke radius in gevoeligheidsanalyse (UA 5–7.5 km; Gazelle 7.5–10 km; sportief 7.5–12 km).
+### 07_multi_brand_analysis.ipynb
+**Wat doet het:** Analyseert de multi-brand dealer realiteit.
 
-- Datakwaliteit en cleaning (CBS‑demografie):
-  - Waarde −99997 interpreteren als 0 (tellingen) of NaN (percentages/ratio’s); documenteer per kolom. Type‑coercion naar numeriek en drop van volledig missende PC4‑regels.
-  - Deduplicatie dealers op `google_place_id`; normaliseer merken (`brand_clean`) en Pon‑vlag (`is_pon_dealer`).
-  - Mapping `PC4 → gemeente` via `data/external/pc4_gemeente.csv` voor aggregaties en policy‑join.
+**Belangrijkste stappen:**
+1. Identificeert 1,374 multi-brand locaties
+2. Categoriseert dealers (Non-Pon, Single Pon, Multi Pon)
+3. Berekent brand diversiteit metrics
+4. Maakt dashboard-ready dataset
 
-- Scoring white‑spots (beleid‑aware):
-  - Basisscore S = z(inwoners) + z(dist_nearest_pon_km) − z(concurrentie_intensiteit) + 0.5 · z(pon_share_gap).
-  - Policy‑correctie: S_policy = S × (1 + α · policy_index), standaard α = 0.5. Exporteer naar `outputs/tables/white_spots_with_policy.csv`.
-  - Guardrails: sla gebieden met extreem hoge dealer‑dichtheid nabij (overlap binnen 0–3–5 km ringen) lager aan om kannibalisatie te beperken.
+**Output:**
+- `dealers_dashboard.parquet` - Enhanced dataset voor Streamlit dashboard
 
-- KPI’s uitgebreid:
-  - Coverage (Pon en per merk), dealers/100k, Pon‑share, concurrentie‑intensiteit.
-  - Dealerkwaliteit (proxy) = `avg_rating * ln(1 + reviews)`; stabiliteit/top‑10 uit `outputs/tables/top10_stability.csv`.
-  - Proximity KPI’s: overlap per ring (0–3–5–7.5–10 km) en dichtstbijzijnde afstandsverdeling.
+## Dashboard (app/streamlit_app.py)
 
-- Validatie en sanity checks:
-  - Herbereken inwoners‑totaal per gemeente/provincie en vergelijk met CBS‑referentie; steekproef top‑20 white‑spots en dichtstbijzijnde dealerlocaties.
-  - Kaart‑controle: visualiseer outliers (zeer grote afstand of onrealistisch hoge aantallen) voor handmatige review.
+Interactieve visualisatie van het dealer netwerk met:
+- Kaart met alle dealers (blauw=Pon, rood=concurrent)
+- Coverage rings visualization
+- White spots tabel
+- Multi-brand analytics
+- Provincial market penetration charts
 
-- Reproduceerbare run (quickstart):
-  - Voer `notebooks/01_dataprep.ipynb` → `02_coverage.ipynb` → `03_kpis_viz.ipynb` uit, en run `src/build_policy_index.py` voor policy.
-  - Start dashboard: `streamlit run app/streamlit_app.py` en filter op merk/radius; toggle ZE‑steden.
+Start met: `streamlit run app/streamlit_app.py`
 
-- Dashboard‑uitbreidingen:
-  - Choropleth‑laag per gemeente (dealers/100k of coverage) en toggle voor ZE‑policy.
-  - KPI‑tabel met download (CSV) en white‑spots top‑50 (policy‑aware).
+## Hoe berekenen we afstanden tussen dealers en postcodes?
 
-- Beperkingen en risico’s (expliciet):
-  - Hemelsbrede afstand; ratings en reviews incompleet; geocoding onnauwkeurig op adresniveau; snapshots in de tijd; geen omzetdata. Documenteer aannames per slide/notebook.
+Dit project moet voor elk postcodegebied in Nederland weten wat de dichtstbijzijnde Pon dealer is. Met 4,073 postcodes en 2,080 dealers betekent dit miljoenen afstandsberekeningen. Hier is hoe we dat aanpakken:
 
-### Demografie-integratie (inkomen, huishoudens, leeftijden)
+### De Haversine formule
+We gebruiken een wiskundige formule die de kortste afstand over de aardbol berekent tussen twee punten. Dit heet de Haversine formule. Stel je voor dat je een touwtje strak spant over een globe tussen twee punten - dat is de afstand die we berekenen.
 
-- Feature set (per PC4, geaggregeerd naar gemeente waar nodig):
-  - Inkomen: mediaan of gemiddelde besteedbaar huishoudinkomen; aandeel lage/hoog‑inkomenskwintielen.
-  - Huishoudens: aantal huishoudens, gemiddelde grootte, aandeel gezinnen met kinderen, eenpersoonshuishoudens.
-  - Leeftijd: verdeling 0–14, 15–24, 25–44, 45–64, 65+; vergrijzingsratio.
-  - Stedelijkheid/dichtheid en WOZ als koopkracht/footfall‑proxies (reeds aanwezig).
+**Wat gaat erin:**
+- GPS coordinaten van punt A (bijvoorbeeld: 52.3676° N, 4.9041° E voor Amsterdam)
+- GPS coordinaten van punt B (bijvoorbeeld: 51.9225° N, 4.4792° E voor Rotterdam)
 
-- Gebruik in analyses:
-  - Segmentatie/clustering van PC4’s: k‑means of HDBSCAN op genormaliseerde demografische features → 4–6 leefstijlclusters (bijv. “jong stedelijk”, “gezin suburbaan”, “senior dorps”).
-  - Merk‑fit per cluster: bereken huidige dealers/100k en Pon‑share per cluster om product‑market fit te leren; gebruik dit als prior in white‑spot scoring.
-  - Elasticiteits‑proxy: regressie of GAM van dealers/100k ~ demografische features om te zien waar extra dealers relatief meer impact hebben.
+**Wat komt eruit:**
+- De afstand in kilometers tussen deze twee punten (in dit geval ongeveer 57 km)
 
-- Score‑uitbreiding met demografie:
-  - S_dem = S_policy + β1·z(huishoudens_met_kinderen%) + β2·z(inkomen_kwintiel_3_5%) + β3·z(25_44%) − β4·z(1p_huishoudens%).
-  - Merk‑specifiek: α/β gewichten per merk (UA meer gewicht op dichtheid en 25–44; Gazelle op gezinnen; sport op hoge inkomens). Startwaarden documenteren en later kalibreren.
+### Waarom niet gewoon alle afstanden uitrekenen?
+Met 4,073 postcodes x 978 Pon dealers = bijna 4 miljoen berekeningen alleen voor Pon dealers. Dat duurt te lang. Daarom gebruiken we een slimme truc.
 
-- KPI’s en visuals:
-  - Tabel met KPI’s per demografisch cluster (coverage, dealers/100k, Pon‑share, white‑spots).
-  - Kaartlaag: choropleth per gemeente met clusterkleur + markers dealers.
-  - Explainer: feature‑importances/coefficients en voorbeeldgebieden per cluster.
+### De KD-tree oplossing
+Een KD-tree is een datastructuur die coordinaten slim organiseert zodat je snel de dichtstbijzijnde punten kunt vinden zonder alles te hoeven uitrekenen. Het is als een telefoonboek voor coordinaten - je hoeft niet het hele boek door te bladeren om iemand te vinden.
 
-- Implementatie (notebooks):
-  - `01_dataprep.ipynb`: maak schone demografie‑features; normaliseer; maak `clusters` per PC4 en exporteer naar `outputs/tables/kpis_by_pc4_with_clusters.csv` (bestand bestaat al als placeholder).
-  - `02_coverage.ipynb`: voeg cluster‑kolom toe aan white‑spots en pas S_dem toe; exporteer `white_spots_with_policy.csv` inclusief cluster en S_dem.
-  - `03_kpis_viz.ipynb`: maak figuren per cluster (bars/choropleth); exporteer `kpi_overview.csv` per cluster.
+**Hoe werkt het:**
+1. Alle dealer coordinaten worden in een boom-structuur gezet (duurt 1 seconde)
+2. Voor elke postcode vragen we: "wat is de dichtstbijzijnde dealer?"
+3. De KD-tree geeft het antwoord in microseconden zonder alle 978 dealers te checken
 
-- Dashboard‑toevoeging:
-  - Filter “Demografisch cluster” en KPI‑kaart per cluster; tooltip met inkomen, huishoudens, leeftijdsprofiel.
+### Belangrijke beperkingen
+**We meten vogelvlucht afstand, niet de werkelijke route:**
+- Onze berekening: 7.5 km hemelsbreed
+- Werkelijkheid: misschien 9-10 km fietsen via straten
+- Een rivier of snelweg tussendoor? Daar houden we geen rekening mee
 
-## 15‑min deliverables (concreet en board‑ready)
+**Waarom doen we dit zo?**
+- Route-berekeningen via Google Maps voor 4,073 postcodes zou dagen duren en veel geld kosten
+- Voor strategische beslissingen is vogelvlucht afstand accuraat genoeg
+- In Nederland zijn de verschillen meestal klein (geen bergen, goede infrastructuur)
 
-- Over/onderbediend (gemeenten)
-  - Output: `outputs/tables/kpi_overview.csv` en `outputs/tables/coverage_overall.csv` + top‑10 tabel met gemeente, inwoners, dealers/100k, Pon‑share, coverage, S_dem score.
-  - Herkomst: `01_dataprep.ipynb` (demografie/aggregatie) → `02_coverage.ipynb` (coverage, S_dem) → `03_kpis_viz.ipynb` (top‑10 export).
+### Wat betekent dit voor de analyse?
+- Onze "7.5 km service radius" aannamen is conservatief - mensen fietsen waarschijnlijk verder
+- White spots kunnen in werkelijkheid beter bereikbaar zijn dan de data suggereert
+- Voor een eerste analyse en strategische beslissingen is deze methode prima
+- Voor definitieve locatiekeuzes zou je wel echte route-afstanden willen gebruiken
 
-- UA internationaal (3 landen/steden + dealer targets)
-  - Output: `outputs/tables/ua_intl_shortlist.csv` met city score, policy‑flag, huidige coverage en target‑gap → vertaald naar #dealers bij 5–7.5 km.
-  - Herkomst: `05_intl_shortlist.ipynb` (densiteit + policy + POIs + inkomen); we presenteren top‑3 steden/landen met target (≥80% coverage) en benodigd #dealers.
+## Installatie
 
-- Portfolio‑advies per merk (stoppen/toevoegen, met business case)
-  - Output: slide met merkmatrix: coverage‑gap vs concurrentie‑intensiteit en cluster‑fit; tabellen per merk met incremental coverage per extra dealer en cannibalisatie‑risico.
-  - Herkomst: `02_coverage.ipynb` (proximity/cannibalisatie) + `03_kpis_viz.ipynb` (merk‑KPI’s). Voorstel: focus op e‑bike/cargo; de‑prioriteer merken met lage incremental coverage en hoge overlap.
+```bash
+pip install -r requirements.txt
+```
 
-- Tijdslijn (werkbaar in 1‑2 dagen)
-  - Dag 1: dataprep + coverage + demografie‑clusters + top‑10 gemeenten.
-  - Dag 2: proximity/cannibalisatie + UA shortlist + portfolio‑matrix + slides.
+Benodigde packages:
+- pandas, numpy voor data processing
+- plotly, matplotlib voor visualisaties
+- streamlit voor dashboard
+- folium voor interactieve kaarten
+- scipy voor afstandsberekeningen
 
+## Runnen van de analyse
+
+Voer notebooks uit in volgorde:
+```bash
+jupyter notebook notebooks/01_dataprep.ipynb
+jupyter notebook notebooks/02_coverage.ipynb
+jupyter notebook notebooks/03_kpis_viz.ipynb
+jupyter notebook notebooks/04_enrichment.ipynb
+jupyter notebook notebooks/05_intl_shortlist.ipynb
+jupyter notebook notebooks/06_portfolio_advies.ipynb
+jupyter notebook notebooks/07_multi_brand_analysis.ipynb
+```
+
+Of automatisch:
+```bash
+jupyter nbconvert --execute notebooks/*.ipynb --inplace
+```
+
+## Belangrijke aannames
+
+- Dealer ontdubbeling op basis van google_place_id
+- Afstanden zijn hemelsbreed, niet over de weg
+- Standaard service radius: 7.5km (fietsafstand)
+- CBS waarde -99997 wordt als missing behandeld
+- Multi-brand dealers zijn de norm, niet uitzondering
+
+## Output structuur
+
+```
+outputs/
+├── tables/          # CSV exports voor analyse
+├── figures/         # Visualisaties voor presentatie
+└── analysis_reports/ # Gedetailleerde markdown rapporten
+```
+
+## Contact
+
+vanvliet.liam@gmail.com
