@@ -410,21 +410,6 @@ if white_spots is not None:
 else:
     st.info("Run `notebooks/02_coverage.ipynb` to generate white spots analysis.")
 
-# KPI Overview
-if gemeente_kpis is not None:
-    st.subheader('🏘️ Municipality KPIs')
-    
-    col5, col6 = st.columns(2)
-    
-    with col5:
-        st.write("**Top 10 Best Served Municipalities**")
-        top_served = gemeente_kpis.nlargest(10, 'dealers_per_100k')[['gemeente', 'dealers_per_100k', 'pon_share']]
-        st.dataframe(top_served, use_container_width=True)
-    
-    with col6:
-        st.write("**Top 10 Underserved Municipalities**") 
-        underserved = gemeente_kpis.nsmallest(10, 'dealers_per_100k')[['gemeente', 'dealers_per_100k', 'pon_share']]
-        st.dataframe(underserved, use_container_width=True)
 
 # Multi-Brand Network Analytics
 st.subheader('🏢 Multi-Brand Network Analytics')
