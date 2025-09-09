@@ -101,6 +101,30 @@ show_pon_only = st.sidebar.checkbox('🎯 Show Pon Dealers Only', False)
 if dealers is not None:
     df = dealers.copy()
     
+    # --- Normalize columns for fallback datasets ---
+    # Ensure a unified schema regardless of source (dashboard parquet, dealers.parquet, raw CSV)
+    # 1) Name
+    if 'name' not in df.columns and 'google_name' in df.columns:
+        df['name'] = df['google_name']
+    
+    # 2) Ratings
+    if 'rating' not in df.columns and 'google_rating' in df.columns:
+        df['rating'] = df['google_rating']
+    if 'n_reviews' not in df.columns and 'google_user_ratings_total' in df.columns:
+        df['n_reviews'] = df['google_user_ratings_total']
+    
+    # 3) is_pon_dealer
+    if 'is_pon_dealer' not in df.columns:
+        pon_set = {
+            'gazelle', 'cannondale', 'union', 'kalkhoff', 'urban_arrow', 'cervélo', 'cervelo', 'focus', 'santa_cruz'
+        }
+        if 'brand_clean' in df.columns:
+            df['is_pon_dealer'] = df['brand_clean'].astype(str).str.lower().isin(pon_set)
+        elif 'brand' in df.columns:
+            df['is_pon_dealer'] = df['brand'].astype(str).str.lower().str.replace(' ', '_', regex=False).isin(pon_set)
+        else:
+            df['is_pon_dealer'] = False
+    
     # Brand filtering
     if selected_brands_clean:
         if 'brand_clean' in df.columns:
@@ -193,10 +217,9 @@ with col1:
         required_cols = ['google_lat', 'google_lng', 'name']
         if all(col in df.columns for col in required_cols):
             # Safe groupby with explicit aggregation for each column
-            agg_dict = {
-                'name': 'first',
-                'is_pon_dealer': 'any'
-            }
+            agg_dict = {'name': 'first'}
+            if 'is_pon_dealer' in df.columns:
+                agg_dict['is_pon_dealer'] = 'any'
             
             # Add brand aggregation - prefer brands_display if available
             if 'brands_display' in df.columns:
