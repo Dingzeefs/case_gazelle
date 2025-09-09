@@ -569,11 +569,27 @@ if proximity_kpis is not None:
     
     with col7:
         st.write("**Pon-to-Pon Proximity (Internal Competition)**")
-        st.dataframe(proximity_kpis[['ring_km', 'pon_near_pon']], use_container_width=True)
+        # Use new column names from corrected proximity analysis
+        if 'avg_pon_near_pon' in proximity_kpis.columns:
+            display_df = proximity_kpis[['ring_km', 'avg_pon_near_pon']].copy()
+            display_df.columns = ['Distance (km)', 'Avg Pon Dealers Nearby']
+        else:
+            # Fallback to old columns if they exist
+            display_df = proximity_kpis[['ring_km', 'pon_near_pon']].copy()
+            display_df.columns = ['Distance (km)', 'Total Connections']
+        st.dataframe(display_df, use_container_width=True)
     
     with col8:
-        st.write("**Pon-to-Competitor Proximity (External Competition)**") 
-        st.dataframe(proximity_kpis[['ring_km', 'pon_near_nonpon']], use_container_width=True)
+        st.write("**Pon-to-Competitor Proximity (External Competition)**")
+        # Use new column names from corrected proximity analysis  
+        if 'avg_pon_near_nonpon' in proximity_kpis.columns:
+            display_df = proximity_kpis[['ring_km', 'avg_pon_near_nonpon']].copy()
+            display_df.columns = ['Distance (km)', 'Avg Competitors Nearby']
+        else:
+            # Fallback to old columns if they exist
+            display_df = proximity_kpis[['ring_km', 'pon_near_nonpon']].copy()
+            display_df.columns = ['Distance (km)', 'Total Connections']
+        st.dataframe(display_df, use_container_width=True)
 
 
 
