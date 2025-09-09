@@ -404,7 +404,7 @@ if gemeente_kpis is not None:
         st.dataframe(underserved, use_container_width=True)
 
 # Multi-Brand Network Analytics
-st.subheader('🎭 Multi-Brand Network Analytics')
+st.subheader('🏢 Multi-Brand Network Analytics')
 
 
 # Check if we have the dashboard data with multi-brand info
@@ -582,20 +582,3 @@ st.caption("""
 **🔄 Data Refresh:** Run notebooks in order (01→02→03→04→05) to update analysis
 """)
 
-# Debug info (hidden by default)
-with st.expander("🔍 Debug Information"):
-    st.write("**Data Loading Status:**")
-    st.write(f"- Dealers: {'✅ Loaded' if dealers is not None else '❌ Missing'}")
-    st.write(f"- White Spots: {'✅ Loaded' if white_spots is not None else '❌ Missing'}")
-    st.write(f"- Municipality KPIs: {'✅ Loaded' if gemeente_kpis is not None else '❌ Missing'}")
-    st.write(f"- Coverage Data: {'✅ Loaded' if coverage_overall is not None else '❌ Missing'}")
-    st.write(f"- Policy Index: {'✅ Loaded' if policy_index is not None else '❌ Missing'}")
-    st.write(f"- Proximity KPIs: {'✅ Loaded' if proximity_kpis is not None else '❌ Missing'}")
-    st.write(f"- International Data: {'✅ Loaded' if ua_intl is not None else '❌ Missing'}")
-    
-    if dealers is not None:
-        st.write(f"**Filtered Data:** {len(df):,} dealers shown")
-        if 'brand_clean' in df.columns:
-            brand_counts = df['brand_clean'].value_counts()
-            st.write("**Brand Distribution:**")
-            st.write(brand_counts)

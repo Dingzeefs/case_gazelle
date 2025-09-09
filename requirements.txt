@@ -12,3 +12,7 @@ requests
 streamlit
 streamlit-folium
 pgeocode
+scipy
+pyarrow
+jupyter
+nbconvert
