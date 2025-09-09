@@ -122,20 +122,39 @@ if dealers is not None:
     
     # ZE-zone filtering - need to map PC4 to gemeente first
     if policy_index is not None and ze_only:
-        if 'pc4' in df.columns:
-            # Load demographic data to get PC4->gemeente mapping
-            demo = load_parquet('data/processed/demografie.parquet')
-            if demo is not None and 'gemeente' in demo.columns:
-                # Map PC4 to gemeente
-                pc4_gemeente = demo[['pc4', 'gemeente']].drop_duplicates()
-                df = df.merge(pc4_gemeente, on='pc4', how='left')
-                # Now filter by ZE-zones
-                df = df.merge(policy_index[['gemeente','policy_index']], on='gemeente', how='left')
-                df = df[df['policy_index'].fillna(0) >= 0.8]
-        
-        # If we can't do the mapping, show message
-        if len(df) == 0 and ze_only:
-            st.sidebar.info("ZE-zone filtering requires gemeente mapping. No dealers found in ZE-zones.")
+        try:
+            # Check if we already have gemeente column from dashboard data
+            if 'gemeente' in df.columns:
+                # Direct merge with policy_index
+                if 'gemeente' in policy_index.columns:
+                    df = df.merge(policy_index[['gemeente','policy_index']], on='gemeente', how='left')
+                    df = df[df['policy_index'].fillna(0) >= 0.8]
+                else:
+                    st.sidebar.warning("Policy index missing gemeente column - ZE-zone filter disabled")
+            elif 'pc4' in df.columns:
+                # Load demographic data to get PC4->gemeente mapping
+                demo = load_parquet('data/processed/demografie.parquet')
+                if demo is not None and 'gemeente' in demo.columns:
+                    # Map PC4 to gemeente
+                    pc4_gemeente = demo[['pc4', 'gemeente']].drop_duplicates()
+                    df = df.merge(pc4_gemeente, on='pc4', how='left')
+                    # Now filter by ZE-zones
+                    if 'gemeente' in policy_index.columns:
+                        df = df.merge(policy_index[['gemeente','policy_index']], on='gemeente', how='left')
+                        df = df[df['policy_index'].fillna(0) >= 0.8]
+                    else:
+                        st.sidebar.warning("Policy index missing gemeente column - ZE-zone filter disabled")
+                else:
+                    st.sidebar.warning("Cannot map PC4 to gemeente - ZE-zone filter disabled")
+            else:
+                st.sidebar.warning("No geographic data available - ZE-zone filter disabled")
+            
+            # Show info if no results
+            if len(df) == 0 and ze_only:
+                st.sidebar.info("No dealers found in ZE-zones with policy ≥ 0.8")
+        except Exception as e:
+            st.sidebar.error(f"ZE-zone filtering error: {str(e)}")
+            # Continue without ZE-zone filtering
 
 # Dashboard Layout
 col1, col2 = st.columns([3, 1])
