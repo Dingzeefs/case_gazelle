@@ -12,3 +12,18 @@ outputs/
 *.swo
 .vscode/
 .idea/
+
+# Local docs and analysis (untracked)
+analysis_reports/
+research/file.md
+research/notes.md
+research/pon_bike_notes.md
+research/research_summary.md
+Case.md
+CLAUDE.md
+DEDUPLICATION_FIX_PLAN.md
+INTERNATIONAL_DATA_RESEARCH.md
+KRITISCHE_ANALYSE.md
+README_DATA_QUALITY.md
+STRATEGISCHE_LAAG.md
+TECHNISCH_STAPPENPLAN.md
